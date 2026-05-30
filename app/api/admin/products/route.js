@@ -44,17 +44,26 @@ export async function POST(request) {
 export async function PUT(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
-  const product = {
-    id: Number(body.id),
-    name: String(body.name || "").trim(),
-    category: String(body.category || "حلويات شريف الزيني").trim(),
-    price: Number(body.price) || 0,
-    originalPrice: Number(body.originalPrice) || null,
-    offerActive: body.offerActive ? 1 : 0,
-    variablePrice: body.variablePrice ? 1 : 0,
-    available: body.available ? 1 : 0,
-    image: body.image || null
-  };
+  const existingProducts = await listProducts({
+  admin: true,
+  withImages: true
+});
+
+const existing = existingProducts.find(
+  (p) => Number(p.id) === Number(body.id)
+);
+
+const product = {
+  id: Number(body.id),
+  name: String(body.name || "").trim(),
+  category: String(body.category || "حلويات شريف الزيني").trim(),
+  price: Number(body.price) || 0,
+  originalPrice: Number(body.originalPrice) || null,
+  offerActive: body.offerActive ? 1 : 0,
+  variablePrice: body.variablePrice ? 1 : 0,
+  available: body.available ? 1 : 0,
+  image: body.image ?? existing?.image ?? null
+};
   await updateProduct(product);
   return Response.json({ product });
 }

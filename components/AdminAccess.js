@@ -219,43 +219,14 @@ function AdminDashboard({ onLogout }) {
   const displayedAdminProducts = filteredProducts.slice(0, productLimit);
 
   useEffect(() => {
-    const missingIds = displayedAdminProducts
-      .filter((product) => !product.image && !product._imageChecked && !requestedImageIds.current.has(Number(product.id)))
-      .slice(0, ADMIN_IMAGE_BATCH_SIZE)
-      .map((product) => Number(product.id));
-    if (missingIds.length === 0) return;
-
-    missingIds.forEach((id) => requestedImageIds.current.add(id));
-    let active = true;
-    missingIds.forEach((id) => {
-      fetch(`/api/admin/products?images=1&ids=${id}&v=${Date.now()}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Image request failed");
-          return res.json();
-        })
-        .then((data) => {
-          if (!active) return;
-          const image = data.images?.[0]?.image || "";
-          updateProductsState((current) =>
-            current.map((product) =>
-              Number(product.id) === id ? { ...product, image, _imageChecked: true } : product
-            )
-          );
-        })
-        .catch(() => {
-          if (!active) return;
-          updateProductsState((current) =>
-            current.map((product) =>
-              Number(product.id) === id ? { ...product, _imageChecked: true } : product
-            )
-          );
-        });
+  fetch("/api/admin/products")
+    .then((res) => res.json())
+    .then((data) => {
+      updateProductsState(
+        (data.products || []).map(normalizeProductForState)
+      );
     });
-
-    return () => {
-      active = false;
-    };
-  }, [displayedAdminProducts]);
+}, []);
 
   function updateProductsState(updater) {
     setProducts((current) => {
