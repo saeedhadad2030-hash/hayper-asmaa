@@ -13,7 +13,7 @@ export async function GET() {
 export async function POST(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
-  const id = await createProduct({
+  const product = {
     name: String(body.name || "").trim(),
     category: String(body.category || "حلويات شريف الزيني").trim(),
     price: Number(body.price) || 0,
@@ -22,14 +22,15 @@ export async function POST(request) {
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available === false ? 0 : 1,
     image: body.image || null
-  });
-  return Response.json({ id: Number(id) });
+  };
+  const id = await createProduct(product);
+  return Response.json({ product: { ...product, id: Number(id) } });
 }
 
 export async function PUT(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
-  await updateProduct({
+  const product = {
     id: Number(body.id),
     name: String(body.name || "").trim(),
     category: String(body.category || "حلويات شريف الزيني").trim(),
@@ -39,8 +40,9 @@ export async function PUT(request) {
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available ? 1 : 0,
     image: body.image || null
-  });
-  return Response.json({ ok: true });
+  };
+  await updateProduct(product);
+  return Response.json({ product });
 }
 
 export async function DELETE(request) {

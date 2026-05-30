@@ -37,6 +37,17 @@ function fileToDataUrl(file) {
   });
 }
 
+function normalizeProductForState(product) {
+  return {
+    ...product,
+    price: Number(product.price) || 0,
+    originalPrice: product.originalPrice == null ? "" : Number(product.originalPrice),
+    offerActive: Boolean(product.offerActive),
+    variablePrice: Boolean(product.variablePrice),
+    available: Boolean(product.available)
+  };
+}
+
 export default function AdminAccess({ embedded = false, onClose }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -116,6 +127,8 @@ function AdminDashboard({ onLogout }) {
   const [productLimit, setProductLimit] = useState(ADMIN_PRODUCT_BATCH_SIZE);
   const [productForm, setProductForm] = useState(blankProduct);
   const [saving, setSaving] = useState(false);
+  const [productActionError, setProductActionError] = useState("");
+  const [deletingIds, setDeletingIds] = useState(new Set());
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -163,7 +176,7 @@ function AdminDashboard({ onLogout }) {
         statsRes.json(),
         passwordRes.json()
       ]);
-      setProducts(productData.products || []);
+      setProducts((productData.products || []).map(normalizeProductForState));
       setOrders(orderData.orders || []);
       setStats(statsData.stats || null);
       setPasswordAudit(passwordData || null);
@@ -176,24 +189,60 @@ function AdminDashboard({ onLogout }) {
 
   async function saveProduct(event) {
     event.preventDefault();
+    setProductActionError("");
     setSaving(true);
-    await fetch("/api/admin/products", {
-      method: productForm.id ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(productForm)
-    });
-    setSaving(false);
-    setProductForm(blankProduct);
-    await refreshAll({ silent: true });
+    try {
+      const editing = Boolean(productForm.id);
+      const response = await fetch("/api/admin/products", {
+        method: editing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(productForm)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "تعذر حفظ المنتج");
+      const savedProduct = normalizeProductForState(data.product);
+      setProducts((current) =>
+        editing
+          ? current.map((product) => (product.id === savedProduct.id ? savedProduct : product))
+          : [savedProduct, ...current]
+      );
+      setProductForm(blankProduct);
+    } catch (err) {
+      setProductActionError(err.message || "تعذر حفظ المنتج");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteProduct(id) {
-    await fetch("/api/admin/products", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
-    });
-    await refreshAll({ silent: true });
+    const removedProduct = products.find((product) => product.id === id);
+    if (!removedProduct) return;
+    setProductActionError("");
+    setDeletingIds((current) => new Set(current).add(id));
+    setProducts((current) => current.filter((product) => product.id !== id));
+    if (productForm.id === id) setProductForm(blankProduct);
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "تعذر حذف المنتج");
+      }
+    } catch (err) {
+      setProducts((current) =>
+        current.some((product) => product.id === id) ? current : [removedProduct, ...current]
+      );
+      setProductActionError(err.message || "تعذر حذف المنتج");
+    } finally {
+      setDeletingIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
   }
 
   async function handleProductImage(event) {
@@ -204,12 +253,18 @@ function AdminDashboard({ onLogout }) {
   }
 
   async function updateOrder(order, updates) {
-    await fetch("/api/admin/orders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: order.id, status: order.status, deliveryFee: order.deliveryFee, ...updates })
-    });
-    await refreshAll({ silent: true });
+    const nextOrder = { ...order, ...updates };
+    setOrders((current) => current.map((item) => (item.id === order.id ? nextOrder : item)));
+    try {
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: order.id, status: order.status, deliveryFee: order.deliveryFee, ...updates })
+      });
+      if (!response.ok) throw new Error("تعذر تحديث الطلب");
+    } catch {
+      setOrders((current) => current.map((item) => (item.id === order.id ? order : item)));
+    }
   }
 
   async function changePassword(event) {
@@ -392,6 +447,7 @@ function AdminDashboard({ onLogout }) {
               placeholder="ابحث باسم المنتج أو القسم"
             />
           </div>
+          {productActionError && <p className="admin-action-error">{productActionError}</p>}
           <div className="admin-list">
             {dashboardLoading && (
               <p className="admin-empty">جاري تحميل المنتجات...</p>
@@ -421,7 +477,7 @@ function AdminDashboard({ onLogout }) {
                 })}>
                   <Pencil size={16} />
                 </button>
-                <button onClick={() => deleteProduct(product.id)}>
+                <button onClick={() => deleteProduct(product.id)} disabled={deletingIds.has(product.id)}>
                   <Trash2 size={16} />
                 </button>
               </article>
