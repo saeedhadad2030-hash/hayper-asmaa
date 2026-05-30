@@ -128,6 +128,8 @@ function AdminDashboard({ onLogout }) {
   const [productForm, setProductForm] = useState(blankProduct);
   const [saving, setSaving] = useState(false);
   const [productActionError, setProductActionError] = useState("");
+  const [dedupeMessage, setDedupeMessage] = useState("");
+  const [deduping, setDeduping] = useState(false);
   const [deletingIds, setDeletingIds] = useState(new Set());
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -242,6 +244,44 @@ function AdminDashboard({ onLogout }) {
         next.delete(id);
         return next;
       });
+    }
+  }
+
+  async function dedupeProducts() {
+    if (!window.confirm("تنضيف المكرر هيمسح النسخ الزيادة ويحتفظ بالنسخة الأفضل، خصوصا اللي فيها صورة. تكمل؟")) {
+      return;
+    }
+    setProductActionError("");
+    setDedupeMessage("");
+    setDeduping(true);
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "dedupe" })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "تعذر تنضيف المنتجات المكررة");
+
+      const deletedIds = new Set(data.deletedIds || []);
+      const keptProducts = new Map(
+        (data.keptProducts || []).map((product) => [Number(product.id), normalizeProductForState(product)])
+      );
+      setProducts((current) =>
+        current
+          .filter((product) => !deletedIds.has(Number(product.id)))
+          .map((product) => keptProducts.get(Number(product.id)) || product)
+      );
+      setProductForm(blankProduct);
+      setDedupeMessage(
+        data.deletedCount > 0
+          ? `تم حذف ${data.deletedCount} منتج مكرر من ${data.duplicateGroups} مجموعة.`
+          : "مفيش منتجات مكررة بنفس الاسم والقسم."
+      );
+    } catch (err) {
+      setProductActionError(err.message || "تعذر تنضيف المنتجات المكررة");
+    } finally {
+      setDeduping(false);
     }
   }
 
@@ -441,6 +481,9 @@ function AdminDashboard({ onLogout }) {
         <section className="admin-products">
           <div className="admin-products-head">
             <h2>المنتجات</h2>
+            <button type="button" onClick={dedupeProducts} disabled={deduping || dashboardLoading}>
+              {deduping ? "جاري التنضيف..." : "تنضيف المكرر"}
+            </button>
             <input
               value={productSearch}
               onChange={(event) => setProductSearch(event.target.value)}
@@ -448,6 +491,7 @@ function AdminDashboard({ onLogout }) {
             />
           </div>
           {productActionError && <p className="admin-action-error">{productActionError}</p>}
+          {dedupeMessage && <p className="admin-action-success">{dedupeMessage}</p>}
           <div className="admin-list">
             {dashboardLoading && (
               <p className="admin-empty">جاري تحميل المنتجات...</p>

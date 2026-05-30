@@ -1132,7 +1132,7 @@ footer a {
 
 .admin-products-head {
   display: grid;
-  grid-template-columns: auto minmax(180px, 320px);
+  grid-template-columns: auto auto minmax(180px, 320px);
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -1152,6 +1152,22 @@ footer a {
   outline-color: var(--gold);
 }
 
+.admin-products-head button {
+  min-height: 40px;
+  border: 1px solid rgba(216, 154, 38, 0.42);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--green-2);
+  background: #fff9ef;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-products-head button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .admin-empty {
   margin: 0;
   padding: 18px;
@@ -1168,6 +1184,16 @@ footer a {
   border-radius: 8px;
   color: #8f2136;
   background: #fff0f3;
+  font-weight: 800;
+}
+
+.admin-action-success {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(35, 109, 55, 0.22);
+  border-radius: 8px;
+  color: var(--green-2);
+  background: #eef8ef;
   font-weight: 800;
 }
 
