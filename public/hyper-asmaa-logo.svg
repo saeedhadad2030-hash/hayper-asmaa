@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">هايبر أسماء</title>
+  <desc id="desc">شعار دائري لمتجر هايبر أسماء</desc>
+  <defs>
+    <linearGradient id="wood" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#6d4329"/>
+      <stop offset="0.5" stop-color="#3b2419"/>
+      <stop offset="1" stop-color="#8b5a34"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="246" fill="#20231e"/>
+  <circle cx="256" cy="256" r="216" fill="url(#wood)" stroke="#d5d7d0" stroke-width="26"/>
+  <circle cx="256" cy="256" r="173" fill="none" stroke="#d5d7d0" stroke-width="7"/>
+  <g fill="none" stroke="#d5d7d0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" transform="translate(186 54) scale(.78)">
+    <path d="M0 27h33l26 92h117l23-69H52"/>
+    <path d="M74 47v70M113 47v70M151 49l-20 68M52 78h129"/>
+    <circle cx="86" cy="143" r="14"/>
+    <circle cx="168" cy="143" r="14"/>
+  </g>
+  <text x="256" y="270" text-anchor="middle" fill="#d5d7d0" font-size="58" font-weight="800" font-family="Tahoma, Arial, sans-serif">هايبر</text>
+  <text x="256" y="342" text-anchor="middle" fill="#d5d7d0" font-size="86" font-weight="900" font-family="Tahoma, Arial, sans-serif">أسماء</text>
+  <text x="256" y="392" text-anchor="middle" fill="#d5d7d0" font-size="31" font-weight="800" font-family="Arial, sans-serif">01065260926</text>
+  <text x="256" y="455" text-anchor="middle" fill="#d5d7d0" font-size="31" font-weight="900" letter-spacing="11" font-family="Arial, sans-serif">HYPER ASMAA</text>
+</svg>
