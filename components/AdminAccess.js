@@ -27,6 +27,7 @@ const blankProduct = {
 };
 
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
+const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache";
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -46,6 +47,12 @@ function normalizeProductForState(product) {
     variablePrice: Boolean(product.variablePrice),
     available: Boolean(product.available)
   };
+}
+
+function cacheAdminProducts(products) {
+  try {
+    localStorage.setItem(ADMIN_PRODUCTS_CACHE_KEY, JSON.stringify(products));
+  } catch {}
 }
 
 export default function AdminAccess({ embedded = false, onClose }) {
@@ -140,6 +147,15 @@ function AdminDashboard({ onLogout }) {
   const [passwordAudit, setPasswordAudit] = useState(null);
 
   useEffect(() => {
+    try {
+      const cachedProducts = JSON.parse(localStorage.getItem(ADMIN_PRODUCTS_CACHE_KEY) || "[]");
+      if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
+        setProducts(cachedProducts.map(normalizeProductForState));
+        setDashboardLoading(false);
+      }
+    } catch {
+      localStorage.removeItem(ADMIN_PRODUCTS_CACHE_KEY);
+    }
     refreshAll();
   }, []);
 
@@ -162,31 +178,47 @@ function AdminDashboard({ onLogout }) {
 
   const displayedAdminProducts = filteredProducts.slice(0, productLimit);
 
+  function updateProductsState(updater) {
+    setProducts((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      cacheAdminProducts(next);
+      return next;
+    });
+  }
+
   async function refreshAll({ silent = false } = {}) {
-    if (!silent) setDashboardLoading(true);
+    if (!silent && products.length === 0) setDashboardLoading(true);
     setDashboardError("");
-    try {
-      const [productRes, orderRes, statsRes, passwordRes] = await Promise.all([
-        fetch("/api/admin/products"),
-        fetch("/api/admin/orders"),
-        fetch("/api/admin/stats"),
-        fetch("/api/admin/password")
-      ]);
-      const [productData, orderData, statsData, passwordData] = await Promise.all([
-        productRes.json(),
-        orderRes.json(),
-        statsRes.json(),
-        passwordRes.json()
-      ]);
-      setProducts((productData.products || []).map(normalizeProductForState));
+
+    const productLoad = fetch("/api/admin/products")
+      .then((res) => res.json())
+      .then((productData) => {
+        const nextProducts = (productData.products || []).map(normalizeProductForState);
+        updateProductsState(nextProducts);
+      })
+      .catch(() => {
+        setDashboardError("تعذر تحميل منتجات لوحة الإدارة. جرب تحديث الصفحة.");
+      })
+      .finally(() => {
+        setDashboardLoading(false);
+      });
+
+    const metaLoad = Promise.all([
+      fetch("/api/admin/orders"),
+      fetch("/api/admin/stats"),
+      fetch("/api/admin/password")
+    ])
+      .then(([orderRes, statsRes, passwordRes]) =>
+        Promise.all([orderRes.json(), statsRes.json(), passwordRes.json()])
+      )
+      .then(([orderData, statsData, passwordData]) => {
       setOrders(orderData.orders || []);
       setStats(statsData.stats || null);
       setPasswordAudit(passwordData || null);
-    } catch {
-      setDashboardError("تعذر تحميل بيانات لوحة الإدارة. جرب تحديث الصفحة.");
-    } finally {
-      setDashboardLoading(false);
-    }
+      })
+      .catch(() => {});
+
+    await Promise.allSettled([productLoad, metaLoad]);
   }
 
   async function saveProduct(event) {
@@ -203,7 +235,7 @@ function AdminDashboard({ onLogout }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "تعذر حفظ المنتج");
       const savedProduct = normalizeProductForState(data.product);
-      setProducts((current) =>
+      updateProductsState((current) =>
         editing
           ? current.map((product) => (product.id === savedProduct.id ? savedProduct : product))
           : [savedProduct, ...current]
@@ -221,7 +253,7 @@ function AdminDashboard({ onLogout }) {
     if (!removedProduct) return;
     setProductActionError("");
     setDeletingIds((current) => new Set(current).add(id));
-    setProducts((current) => current.filter((product) => product.id !== id));
+    updateProductsState((current) => current.filter((product) => product.id !== id));
     if (productForm.id === id) setProductForm(blankProduct);
     try {
       const response = await fetch("/api/admin/products", {
@@ -234,7 +266,7 @@ function AdminDashboard({ onLogout }) {
         throw new Error(data.error || "تعذر حذف المنتج");
       }
     } catch (err) {
-      setProducts((current) =>
+      updateProductsState((current) =>
         current.some((product) => product.id === id) ? current : [removedProduct, ...current]
       );
       setProductActionError(err.message || "تعذر حذف المنتج");
@@ -267,7 +299,7 @@ function AdminDashboard({ onLogout }) {
       const keptProducts = new Map(
         (data.keptProducts || []).map((product) => [Number(product.id), normalizeProductForState(product)])
       );
-      setProducts((current) =>
+      updateProductsState((current) =>
         current
           .filter((product) => !deletedIds.has(Number(product.id)))
           .map((product) => keptProducts.get(Number(product.id)) || product)
@@ -501,7 +533,7 @@ function AdminDashboard({ onLogout }) {
             )}
             {!dashboardLoading && !dashboardError && displayedAdminProducts.map((product) => (
               <article key={product.id} className={!product.available ? "muted" : ""}>
-                {product.image ? <img src={product.image} alt={product.name} /> : <span className="tiny-placeholder" />}
+                {product.image ? <img src={product.image} alt={product.name} loading="lazy" decoding="async" /> : <span className="tiny-placeholder" />}
                 <div>
                   <strong>{product.name}</strong>
                   <span>

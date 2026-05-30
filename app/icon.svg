@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="wood" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#7b4b2c"/>
+      <stop offset="0.52" stop-color="#392418"/>
+      <stop offset="1" stop-color="#98623a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffe0a0"/>
+      <stop offset="1" stop-color="#d89a26"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="#151914"/>
+  <circle cx="64" cy="64" r="49" fill="url(#wood)" stroke="#e3e1d7" stroke-width="7"/>
+  <path d="M35 37h9l7 28h34l7-21H49" fill="none" stroke="#e3e1d7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M58 44v20M72 44v20M86 45l-7 19" fill="none" stroke="#e3e1d7" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="56" cy="75" r="5" fill="#e3e1d7"/>
+  <circle cx="84" cy="75" r="5" fill="#e3e1d7"/>
+  <text x="64" y="104" text-anchor="middle" fill="url(#gold)" font-size="20" font-weight="900" font-family="Arial, Tahoma, sans-serif">HA</text>
+</svg>

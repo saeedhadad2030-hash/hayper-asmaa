@@ -401,6 +401,10 @@ export default function ShopClient({ initialProducts = [], initialProductsError 
             </button>
           ))}
         </div>
+        <div className="catalog-meta">
+          <span>{visibleProducts.length} منتج متاح للعرض</span>
+          <strong>{offerProducts.length} عرض شغال</strong>
+        </div>
       </section>
 
       <section className="products-grid">
