@@ -82,6 +82,18 @@ function cacheAdminProducts(products) {
   } catch {}
 }
 
+async function uploadProductImageIfNeeded(image) {
+  if (!String(image || "").startsWith("data:image/")) return image || "";
+  const response = await fetch("/api/admin/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "تعذر رفع صورة المنتج");
+  return data.url;
+}
+
 export default function AdminAccess({ embedded = false, onClose }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -294,10 +306,14 @@ function AdminDashboard({ onLogout }) {
     setSaving(true);
     try {
       const editing = Boolean(productForm.id);
+      const payload = {
+        ...productForm,
+        image: await uploadProductImageIfNeeded(productForm.image)
+      };
       const response = await fetch("/api/admin/products", {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(productForm)
+        body: JSON.stringify(payload)
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "تعذر حفظ المنتج");
