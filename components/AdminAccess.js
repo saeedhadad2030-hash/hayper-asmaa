@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   CheckCircle2,
@@ -29,10 +29,36 @@ const blankProduct = {
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
 const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache";
 
+function stripProductImages(products) {
+  return products.map(({ image, _imageChecked, ...product }) => product);
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function resizeImage(file, maxSize = 900, quality = 0.74) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const reader = new FileReader();
+    reader.onload = () => {
+      image.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      image.onerror = reject;
+      image.src = reader.result;
+    };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -51,7 +77,7 @@ function normalizeProductForState(product) {
 
 function cacheAdminProducts(products) {
   try {
-    localStorage.setItem(ADMIN_PRODUCTS_CACHE_KEY, JSON.stringify(products));
+    localStorage.setItem(ADMIN_PRODUCTS_CACHE_KEY, JSON.stringify(stripProductImages(products)));
   } catch {}
 }
 
@@ -138,6 +164,7 @@ function AdminDashboard({ onLogout }) {
   const [dedupeMessage, setDedupeMessage] = useState("");
   const [deduping, setDeduping] = useState(false);
   const [deletingIds, setDeletingIds] = useState(new Set());
+  const requestedImageIds = useRef(new Set());
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -150,7 +177,7 @@ function AdminDashboard({ onLogout }) {
     try {
       const cachedProducts = JSON.parse(localStorage.getItem(ADMIN_PRODUCTS_CACHE_KEY) || "[]");
       if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
-        setProducts(cachedProducts.map(normalizeProductForState));
+        setProducts(stripProductImages(cachedProducts).map(normalizeProductForState));
         setDashboardLoading(false);
       }
     } catch {
@@ -177,6 +204,45 @@ function AdminDashboard({ onLogout }) {
   }, [products, productSearch]);
 
   const displayedAdminProducts = filteredProducts.slice(0, productLimit);
+
+  useEffect(() => {
+    const missingIds = displayedAdminProducts
+      .filter((product) => !product.image && !product._imageChecked && !requestedImageIds.current.has(Number(product.id)))
+      .slice(0, 24)
+      .map((product) => Number(product.id));
+    if (missingIds.length === 0) return;
+
+    missingIds.forEach((id) => requestedImageIds.current.add(id));
+    let active = true;
+    fetch(`/api/admin/products?images=1&ids=${missingIds.join(",")}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Images request failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        const imageMap = new Map((data.images || []).map((item) => [Number(item.id), item.image || ""]));
+        updateProductsState((current) =>
+          current.map((product) =>
+            missingIds.includes(Number(product.id))
+              ? { ...product, image: imageMap.get(Number(product.id)) || "", _imageChecked: true }
+              : product
+          )
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        updateProductsState((current) =>
+          current.map((product) =>
+            missingIds.includes(Number(product.id)) ? { ...product, _imageChecked: true } : product
+          )
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [displayedAdminProducts]);
 
   function updateProductsState(updater) {
     setProducts((current) => {
@@ -279,6 +345,27 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
+  async function editProduct(product) {
+    const baseProduct = {
+      ...product,
+      originalPrice: product.originalPrice || "",
+      offerActive: Boolean(product.offerActive),
+      variablePrice: Boolean(product.variablePrice),
+      available: Boolean(product.available)
+    };
+    setProductForm(baseProduct);
+    if (product.image || product._imageChecked) return;
+    try {
+      const response = await fetch(`/api/admin/products?images=1&ids=${Number(product.id)}`);
+      const data = await response.json();
+      const image = data.images?.[0]?.image || "";
+      setProductForm((current) => (current.id === product.id ? { ...current, image } : current));
+      updateProductsState((current) =>
+        current.map((item) => (item.id === product.id ? { ...item, image, _imageChecked: true } : item))
+      );
+    } catch {}
+  }
+
   async function dedupeProducts() {
     if (!window.confirm("تنضيف المكرر هيمسح النسخ الزيادة ويحتفظ بالنسخة الأفضل، خصوصا اللي فيها صورة. تكمل؟")) {
       return;
@@ -320,7 +407,7 @@ function AdminDashboard({ onLogout }) {
   async function handleProductImage(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await resizeImage(file).catch(() => fileToDataUrl(file));
     setProductForm((current) => ({ ...current, image: dataUrl }));
   }
 
@@ -544,13 +631,7 @@ function AdminDashboard({ onLogout }) {
                   </span>
                   {!product.available && <em>Sold Out</em>}
                 </div>
-                <button onClick={() => setProductForm({
-                  ...product,
-                  originalPrice: product.originalPrice || "",
-                  offerActive: Boolean(product.offerActive),
-                  variablePrice: Boolean(product.variablePrice),
-                  available: Boolean(product.available)
-                })}>
+                <button onClick={() => editProduct(product)}>
                   <Pencil size={16} />
                 </button>
                 <button onClick={() => deleteProduct(product.id)} disabled={deletingIds.has(product.id)}>

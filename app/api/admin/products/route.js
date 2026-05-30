@@ -1,10 +1,18 @@
 import { isAdmin, unauthorized } from "@/lib/auth";
-import { createProduct, deleteProduct, deleteProducts, listProducts, updateProduct } from "@/lib/store";
+import { createProduct, deleteProduct, deleteProducts, listProductImages, listProducts, updateProduct } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request) {
   if (!(await isAdmin())) return unauthorized();
+  const url = new URL(request.url);
+  const ids = String(url.searchParams.get("ids") || "")
+    .split(",")
+    .map((id) => Number(id))
+    .filter(Boolean);
+  if (url.searchParams.get("images") === "1") {
+    return Response.json({ images: await listProductImages(ids) });
+  }
   return Response.json({
     products: await listProducts({ admin: true })
   });
@@ -71,7 +79,7 @@ export async function PATCH(request) {
   const body = await request.json();
   if (body.action !== "dedupe") return Response.json({ error: "إجراء غير معروف" }, { status: 400 });
 
-  const products = await listProducts({ admin: true });
+  const products = await listProducts({ admin: true, withImages: true });
   const groups = new Map();
   for (const product of products) {
     const key = productKey(product);

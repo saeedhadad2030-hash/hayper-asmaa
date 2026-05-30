@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgePercent,
   Clock3,
@@ -30,6 +30,10 @@ const tabs = [
 
 const PRODUCT_BATCH_SIZE = 48;
 const EMPTY_PRODUCTS = [];
+
+function stripProductImages(products) {
+  return products.map(({ image, _imageChecked, ...product }) => product);
+}
 
 function Logo() {
   return (
@@ -71,6 +75,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   const [cartBump, setCartBump] = useState(false);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const requestedImageIds = useRef(new Set());
   const [form, setForm] = useState({
     customerName: "",
     phone: "",
@@ -87,14 +92,14 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     let hasFallbackProducts = hasInitialProducts;
     if (hasInitialProducts) {
       try {
-        localStorage.setItem("hyperProductsCache", JSON.stringify(initialProducts));
+        localStorage.setItem("hyperProductsCache", JSON.stringify(stripProductImages(initialProducts)));
       } catch {}
     } else {
       try {
         const cachedProducts = JSON.parse(localStorage.getItem("hyperProductsCache") || "[]");
         if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
           hasFallbackProducts = true;
-          setProducts(cachedProducts);
+          setProducts(stripProductImages(cachedProducts));
           setProductsLoading(false);
           setProductsError("");
         }
@@ -116,7 +121,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         const nextProducts = data.products || [];
         setProducts(nextProducts);
         try {
-          localStorage.setItem("hyperProductsCache", JSON.stringify(nextProducts));
+          localStorage.setItem("hyperProductsCache", JSON.stringify(stripProductImages(nextProducts)));
         } catch {}
       })
       .catch(() => {
@@ -183,6 +188,44 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     [products]
   );
   const displayedProducts = visibleProducts.slice(0, visibleLimit);
+
+  useEffect(() => {
+    const missingIds = displayedProducts
+      .filter((product) => !product.image && !product._imageChecked && !requestedImageIds.current.has(Number(product.id)))
+      .slice(0, 24)
+      .map((product) => Number(product.id));
+    if (missingIds.length === 0) return;
+
+    missingIds.forEach((id) => requestedImageIds.current.add(id));
+    let active = true;
+    fetch(`/api/products?images=1&ids=${missingIds.join(",")}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Images request failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (!active) return;
+        const imageMap = new Map((data.images || []).map((item) => [Number(item.id), item.image || ""]));
+        setProducts((current) =>
+          current.map((product) =>
+            missingIds.includes(Number(product.id))
+              ? { ...product, image: imageMap.get(Number(product.id)) || "", _imageChecked: true }
+              : product
+          )
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setProducts((current) =>
+          current.map((product) =>
+            missingIds.includes(Number(product.id)) ? { ...product, _imageChecked: true } : product
+          )
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, [displayedProducts]);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deposit = calculateDeposit(subtotal, form.paymentMethod);
