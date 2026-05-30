@@ -27,6 +27,7 @@ const blankProduct = {
 };
 
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
+const ADMIN_IMAGE_BATCH_SIZE = 10;
 const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache";
 
 function stripProductImages(products) {
@@ -208,36 +209,36 @@ function AdminDashboard({ onLogout }) {
   useEffect(() => {
     const missingIds = displayedAdminProducts
       .filter((product) => !product.image && !product._imageChecked && !requestedImageIds.current.has(Number(product.id)))
-      .slice(0, 24)
+      .slice(0, ADMIN_IMAGE_BATCH_SIZE)
       .map((product) => Number(product.id));
     if (missingIds.length === 0) return;
 
     missingIds.forEach((id) => requestedImageIds.current.add(id));
     let active = true;
-    fetch(`/api/admin/products?images=1&ids=${missingIds.join(",")}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Images request failed");
-        return res.json();
-      })
-      .then((data) => {
-        if (!active) return;
-        const imageMap = new Map((data.images || []).map((item) => [Number(item.id), item.image || ""]));
-        updateProductsState((current) =>
-          current.map((product) =>
-            missingIds.includes(Number(product.id))
-              ? { ...product, image: imageMap.get(Number(product.id)) || "", _imageChecked: true }
-              : product
-          )
-        );
-      })
-      .catch(() => {
-        if (!active) return;
-        updateProductsState((current) =>
-          current.map((product) =>
-            missingIds.includes(Number(product.id)) ? { ...product, _imageChecked: true } : product
-          )
-        );
-      });
+    missingIds.forEach((id) => {
+      fetch(`/api/admin/products?images=1&ids=${id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Image request failed");
+          return res.json();
+        })
+        .then((data) => {
+          if (!active) return;
+          const image = data.images?.[0]?.image || "";
+          updateProductsState((current) =>
+            current.map((product) =>
+              Number(product.id) === id ? { ...product, image, _imageChecked: true } : product
+            )
+          );
+        })
+        .catch(() => {
+          if (!active) return;
+          updateProductsState((current) =>
+            current.map((product) =>
+              Number(product.id) === id ? { ...product, _imageChecked: true } : product
+            )
+          );
+        });
+    });
 
     return () => {
       active = false;

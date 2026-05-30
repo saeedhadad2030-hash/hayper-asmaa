@@ -29,6 +29,7 @@ const tabs = [
 ];
 
 const PRODUCT_BATCH_SIZE = 48;
+const IMAGE_BATCH_SIZE = 8;
 const EMPTY_PRODUCTS = [];
 
 function stripProductImages(products) {
@@ -192,36 +193,36 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   useEffect(() => {
     const missingIds = displayedProducts
       .filter((product) => !product.image && !product._imageChecked && !requestedImageIds.current.has(Number(product.id)))
-      .slice(0, 24)
+      .slice(0, IMAGE_BATCH_SIZE)
       .map((product) => Number(product.id));
     if (missingIds.length === 0) return;
 
     missingIds.forEach((id) => requestedImageIds.current.add(id));
     let active = true;
-    fetch(`/api/products?images=1&ids=${missingIds.join(",")}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Images request failed");
-        return res.json();
-      })
-      .then((data) => {
-        if (!active) return;
-        const imageMap = new Map((data.images || []).map((item) => [Number(item.id), item.image || ""]));
-        setProducts((current) =>
-          current.map((product) =>
-            missingIds.includes(Number(product.id))
-              ? { ...product, image: imageMap.get(Number(product.id)) || "", _imageChecked: true }
-              : product
-          )
-        );
-      })
-      .catch(() => {
-        if (!active) return;
-        setProducts((current) =>
-          current.map((product) =>
-            missingIds.includes(Number(product.id)) ? { ...product, _imageChecked: true } : product
-          )
-        );
-      });
+    missingIds.forEach((id) => {
+      fetch(`/api/products?images=1&ids=${id}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Image request failed");
+          return res.json();
+        })
+        .then((data) => {
+          if (!active) return;
+          const image = data.images?.[0]?.image || "";
+          setProducts((current) =>
+            current.map((product) =>
+              Number(product.id) === id ? { ...product, image, _imageChecked: true } : product
+            )
+          );
+        })
+        .catch(() => {
+          if (!active) return;
+          setProducts((current) =>
+            current.map((product) =>
+              Number(product.id) === id ? { ...product, _imageChecked: true } : product
+            )
+          );
+        });
+    });
     return () => {
       active = false;
     };
