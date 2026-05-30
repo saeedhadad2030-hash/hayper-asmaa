@@ -903,6 +903,34 @@ footer a {
   font-weight: 800;
 }
 
+.checkout-receipt-preview,
+.receipt-preview {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.checkout-receipt-preview img,
+.receipt-preview img {
+  width: 86px;
+  height: 86px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e0d5;
+  background: #f7f4ec;
+}
+
+.checkout-receipt-preview span {
+  color: var(--green-2);
+  font-weight: 800;
+  line-height: 1.6;
+}
+
 .admin-login,
 .admin-page,
 .admin-page-inner {
@@ -1269,6 +1297,15 @@ footer a {
 .receipt-link {
   color: var(--green);
   font-weight: 900;
+}
+
+.receipt-preview div {
+  display: grid;
+  gap: 6px;
+}
+
+.receipt-preview strong {
+  color: var(--green-2);
 }
 
 .order-controls {

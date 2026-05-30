@@ -433,9 +433,15 @@ function AdminDashboard({ onLogout }) {
                 <span>التوصيل المتوقع: {order.deliveryDate}</span>
               </div>
               {order.receiptImage && (
-                <a className="receipt-link" href={order.receiptImage} target="_blank">
-                  فتح إيصال التحويل
-                </a>
+                <div className="receipt-preview">
+                  <img src={order.receiptImage} alt={`إيصال تحويل طلب ${order.id}`} />
+                  <div>
+                    <strong>إيصال التحويل</strong>
+                    <a className="receipt-link" href={order.receiptImage} target="_blank">
+                      فتح الصورة بحجم كامل
+                    </a>
+                  </div>
+                </div>
               )}
               <div className="order-controls">
                 <select value={order.status} onChange={(event) => updateOrder(order, { status: event.target.value })}>

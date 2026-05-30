@@ -73,6 +73,7 @@ export default function HomePage() {
   const [toast, setToast] = useState(null);
   const [cartBump, setCartBump] = useState(false);
   const [receiptName, setReceiptName] = useState("");
+  const [receiptFile, setReceiptFile] = useState(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [form, setForm] = useState({
@@ -198,6 +199,7 @@ export default function HomePage() {
     const file = event.target.files?.[0];
     if (!file) return;
     const dataUrl = await fileToDataUrl(file);
+    setReceiptFile(file);
     setReceiptName(file.name);
     setForm((current) => ({ ...current, receiptImage: dataUrl }));
   }
@@ -228,10 +230,51 @@ export default function HomePage() {
       return;
     }
 
-    const whatsAppText = encodeURIComponent(
-      `طلب جديد من هايبر أسماء\nرقم الطلب: ${data.order.id}\nالاسم: ${form.customerName}\nالإجمالي: ${money(data.order.subtotal)}\nالعربون المطلوب: ${money(data.order.depositTotal)}\nالتوصيل المتوقع: ${data.order.deliveryDate}`
-    );
-    window.open(`https://wa.me/201031367037?text=${whatsAppText}`, "_blank", "noopener,noreferrer");
+    const orderItemsText = cart
+      .map((item) => `- ${item.name} × ${item.quantity} = ${money(item.price * item.quantity)}`)
+      .join("\n");
+    const receiptText = form.receiptImage ? "الإيصال: مرفوع داخل لوحة الإدارة" : "الإيصال: لم يتم رفع إيصال";
+    const whatsappMessage = [
+      "طلب حجز جديد - هايبر أسماء",
+      "-------------------------",
+      `رقم الطلب: ${data.order.id}`,
+      `حالة الطلب: ${data.order.status}`,
+      `الاسم: ${form.customerName}`,
+      `الهاتف: ${form.phone}`,
+      `العنوان: ${form.address}`,
+      "",
+      "المنتجات:",
+      orderItemsText,
+      "",
+      `الإجمالي: ${money(data.order.subtotal)}`,
+      `العربون المطلوب: ${money(data.order.deposit)}`,
+      `عمولة التحويل: ${money(data.order.fee)}`,
+      `المطلوب تحويله الآن: ${money(data.order.depositTotal)}`,
+      `طريقة الدفع: ${payment.label}`,
+      `رقم التحويل: ${data.order.paymentNumber}`,
+      `التوصيل المتوقع: ${data.order.deliveryDate}`,
+      receiptText,
+      form.notes ? `ملاحظات: ${form.notes}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const canShareReceipt =
+      receiptFile &&
+      navigator.canShare &&
+      navigator.canShare({ files: [receiptFile] });
+    if (canShareReceipt) {
+      try {
+        await navigator.share({
+          title: `طلب هايبر أسماء #${data.order.id}`,
+          text: whatsappMessage,
+          files: [receiptFile]
+        });
+      } catch {
+        window.open(`https://wa.me/201031367037?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+      }
+    } else {
+      window.open(`https://wa.me/201031367037?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+    }
     setMessage(`تم تسجيل الطلب رقم ${data.order.id}. الإدارة هتراجعه وتأكد الحجز.`);
     setCart([]);
     setForm({
@@ -242,6 +285,7 @@ export default function HomePage() {
       paymentMethod: "instapay",
       receiptImage: ""
     });
+    setReceiptFile(null);
     localStorage.removeItem("hyperCheckout");
     setReceiptName("");
   }
@@ -479,6 +523,12 @@ export default function HomePage() {
                 <input type="file" accept="image/*" onChange={handleReceipt} />
                 <span>{receiptName || "اختار صورة الإيصال"}</span>
               </label>
+              {form.receiptImage && (
+                <div className="checkout-receipt-preview">
+                  <img src={form.receiptImage} alt="معاينة إيصال التحويل" />
+                  <span>الإيصال جاهز وهيظهر في لوحة الإدارة.</span>
+                </div>
+              )}
 
               {message && <p className="form-message">{message}</p>}
               <button className="primary-action" disabled={sending || cart.length === 0}>
