@@ -28,6 +28,8 @@ const tabs = [
   { id: "facebook", label: "تابعنا ع الفيس", icon: Share2 }
 ];
 
+const PRODUCT_BATCH_SIZE = 48;
+
 function Logo() {
   return (
     <div className="brand-mark" aria-label="هايبر أسماء">
@@ -55,6 +57,9 @@ function ProductImage({ product }) {
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
+  const [visibleLimit, setVisibleLimit] = useState(PRODUCT_BATCH_SIZE);
   const [cart, setCart] = useState([]);
   const [activeTab, setActiveTab] = useState("sweets");
   const [query, setQuery] = useState("");
@@ -74,10 +79,30 @@ export default function HomePage() {
   });
 
   useEffect(() => {
+    let active = true;
+    setProductsLoading(true);
+    setProductsError("");
     fetch("/api/products")
       .then((res) => res.json())
-      .then((data) => setProducts(data.products || []));
+      .then((data) => {
+        if (!active) return;
+        setProducts(data.products || []);
+      })
+      .catch(() => {
+        if (!active) return;
+        setProductsError("تعذر تحميل المنتجات. جرب تحديث الصفحة.");
+      })
+      .finally(() => {
+        if (active) setProductsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    setVisibleLimit(PRODUCT_BATCH_SIZE);
+  }, [activeTab, query]);
 
   useEffect(() => {
     try {
@@ -123,6 +148,7 @@ export default function HomePage() {
     () => products.filter((product) => Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price)),
     [products]
   );
+  const displayedProducts = visibleProducts.slice(0, visibleLimit);
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deposit = calculateDeposit(subtotal, form.paymentMethod);
@@ -355,10 +381,23 @@ export default function HomePage() {
       </section>
 
       <section className="products-grid">
-        {visibleProducts.map((product) => (
+        {productsLoading &&
+          Array.from({ length: 8 }).map((_, index) => <div className="product-skeleton" key={index} />)}
+        {!productsLoading && productsError && <p className="empty catalog-empty">{productsError}</p>}
+        {!productsLoading && !productsError && displayedProducts.map((product) => (
           <ProductCard key={product.id} product={product} onAdd={addToCart} />
         ))}
+        {!productsLoading && !productsError && visibleProducts.length === 0 && (
+          <p className="empty catalog-empty">مفيش منتجات مطابقة للبحث.</p>
+        )}
       </section>
+      {!productsLoading && !productsError && visibleLimit < visibleProducts.length && (
+        <div className="load-more-wrap">
+          <button type="button" onClick={() => setVisibleLimit((limit) => limit + PRODUCT_BATCH_SIZE)}>
+            عرض منتجات أكتر
+          </button>
+        </div>
+      )}
 
       <section className="about-market scroll-target" id="offers">
         <div>

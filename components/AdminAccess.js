@@ -26,6 +26,8 @@ const blankProduct = {
   image: ""
 };
 
+const ADMIN_PRODUCT_BATCH_SIZE = 80;
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -106,9 +108,12 @@ export default function AdminAccess({ embedded = false, onClose }) {
 
 function AdminDashboard({ onLogout }) {
   const [products, setProducts] = useState([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [productSearch, setProductSearch] = useState("");
+  const [productLimit, setProductLimit] = useState(ADMIN_PRODUCT_BATCH_SIZE);
   const [productForm, setProductForm] = useState(blankProduct);
   const [saving, setSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -123,6 +128,10 @@ function AdminDashboard({ onLogout }) {
     refreshAll();
   }, []);
 
+  useEffect(() => {
+    setProductLimit(ADMIN_PRODUCT_BATCH_SIZE);
+  }, [productSearch]);
+
   const categories = useMemo(
     () => Array.from(new Set(products.map((product) => product.category))),
     [products]
@@ -136,23 +145,33 @@ function AdminDashboard({ onLogout }) {
     );
   }, [products, productSearch]);
 
-  async function refreshAll() {
-    const [productRes, orderRes, statsRes, passwordRes] = await Promise.all([
-      fetch("/api/admin/products"),
-      fetch("/api/admin/orders"),
-      fetch("/api/admin/stats"),
-      fetch("/api/admin/password")
-    ]);
-    const [productData, orderData, statsData, passwordData] = await Promise.all([
-      productRes.json(),
-      orderRes.json(),
-      statsRes.json(),
-      passwordRes.json()
-    ]);
-    setProducts(productData.products || []);
-    setOrders(orderData.orders || []);
-    setStats(statsData.stats || null);
-    setPasswordAudit(passwordData || null);
+  const displayedAdminProducts = filteredProducts.slice(0, productLimit);
+
+  async function refreshAll({ silent = false } = {}) {
+    if (!silent) setDashboardLoading(true);
+    setDashboardError("");
+    try {
+      const [productRes, orderRes, statsRes, passwordRes] = await Promise.all([
+        fetch("/api/admin/products"),
+        fetch("/api/admin/orders"),
+        fetch("/api/admin/stats"),
+        fetch("/api/admin/password")
+      ]);
+      const [productData, orderData, statsData, passwordData] = await Promise.all([
+        productRes.json(),
+        orderRes.json(),
+        statsRes.json(),
+        passwordRes.json()
+      ]);
+      setProducts(productData.products || []);
+      setOrders(orderData.orders || []);
+      setStats(statsData.stats || null);
+      setPasswordAudit(passwordData || null);
+    } catch {
+      setDashboardError("تعذر تحميل بيانات لوحة الإدارة. جرب تحديث الصفحة.");
+    } finally {
+      setDashboardLoading(false);
+    }
   }
 
   async function saveProduct(event) {
@@ -165,7 +184,7 @@ function AdminDashboard({ onLogout }) {
     });
     setSaving(false);
     setProductForm(blankProduct);
-    await refreshAll();
+    await refreshAll({ silent: true });
   }
 
   async function deleteProduct(id) {
@@ -174,7 +193,7 @@ function AdminDashboard({ onLogout }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id })
     });
-    await refreshAll();
+    await refreshAll({ silent: true });
   }
 
   async function handleProductImage(event) {
@@ -190,7 +209,7 @@ function AdminDashboard({ onLogout }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: order.id, status: order.status, deliveryFee: order.deliveryFee, ...updates })
     });
-    await refreshAll();
+    await refreshAll({ silent: true });
   }
 
   async function changePassword(event) {
@@ -212,7 +231,7 @@ function AdminDashboard({ onLogout }) {
     }
     setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
     setPasswordMessage("تم تغيير الباسورد بنجاح");
-    await refreshAll();
+    await refreshAll({ silent: true });
   }
 
   return (
@@ -374,7 +393,13 @@ function AdminDashboard({ onLogout }) {
             />
           </div>
           <div className="admin-list">
-            {filteredProducts.map((product) => (
+            {dashboardLoading && (
+              <p className="admin-empty">جاري تحميل المنتجات...</p>
+            )}
+            {!dashboardLoading && dashboardError && (
+              <p className="admin-empty">{dashboardError}</p>
+            )}
+            {!dashboardLoading && !dashboardError && displayedAdminProducts.map((product) => (
               <article key={product.id} className={!product.available ? "muted" : ""}>
                 {product.image ? <img src={product.image} alt={product.name} /> : <span className="tiny-placeholder" />}
                 <div>
@@ -401,8 +426,17 @@ function AdminDashboard({ onLogout }) {
                 </button>
               </article>
             ))}
-            {filteredProducts.length === 0 && (
+            {!dashboardLoading && !dashboardError && filteredProducts.length === 0 && (
               <p className="admin-empty">مفيش منتجات مطابقة للبحث.</p>
+            )}
+            {!dashboardLoading && !dashboardError && productLimit < filteredProducts.length && (
+              <button
+                className="admin-load-more"
+                type="button"
+                onClick={() => setProductLimit((limit) => limit + ADMIN_PRODUCT_BATCH_SIZE)}
+              >
+                عرض منتجات أكتر
+              </button>
             )}
           </div>
         </section>
