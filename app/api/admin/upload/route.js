@@ -31,7 +31,18 @@ async function ensureBucket() {
   const check = await fetch(`${baseUrl}/storage/v1/bucket/${BUCKET}`, {
     headers: storageHeaders()
   });
-  if (check.ok) return;
+  if (check.ok) {
+    await fetch(`${baseUrl}/storage/v1/bucket/${BUCKET}`, {
+      method: "PUT",
+      headers: storageHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({
+        public: true,
+        file_size_limit: 5242880,
+        allowed_mime_types: ["image/jpeg", "image/png", "image/webp"]
+      })
+    }).catch(() => {});
+    return;
+  }
 
   const create = await fetch(`${baseUrl}/storage/v1/bucket`, {
     method: "POST",
