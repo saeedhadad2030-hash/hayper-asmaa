@@ -11,7 +11,10 @@ export async function GET(request) {
     .map((id) => Number(id))
     .filter(Boolean);
   if (url.searchParams.get("images") === "1") {
-    return Response.json({ images: await listProductImages(ids) });
+    return Response.json(
+      { images: await listProductImages(ids) },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   }
   return Response.json({
     products: await listProducts({ admin: true })

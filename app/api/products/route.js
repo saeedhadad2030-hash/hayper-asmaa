@@ -11,7 +11,7 @@ export async function GET(request) {
   if (url.searchParams.get("images") === "1") {
     return Response.json(
       { images: await listProductImages(ids) },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+      { headers: { "Cache-Control": "no-store" } }
     );
   }
 

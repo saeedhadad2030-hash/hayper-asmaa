@@ -200,7 +200,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     missingIds.forEach((id) => requestedImageIds.current.add(id));
     let active = true;
     missingIds.forEach((id) => {
-      fetch(`/api/products?images=1&ids=${id}`)
+      fetch(`/api/products?images=1&ids=${id}&v=${Date.now()}`)
         .then((res) => {
           if (!res.ok) throw new Error("Image request failed");
           return res.json();

@@ -216,7 +216,7 @@ function AdminDashboard({ onLogout }) {
     missingIds.forEach((id) => requestedImageIds.current.add(id));
     let active = true;
     missingIds.forEach((id) => {
-      fetch(`/api/admin/products?images=1&ids=${id}`)
+      fetch(`/api/admin/products?images=1&ids=${id}&v=${Date.now()}`)
         .then((res) => {
           if (!res.ok) throw new Error("Image request failed");
           return res.json();
@@ -357,7 +357,7 @@ function AdminDashboard({ onLogout }) {
     setProductForm(baseProduct);
     if (product.image || product._imageChecked) return;
     try {
-      const response = await fetch(`/api/admin/products?images=1&ids=${Number(product.id)}`);
+      const response = await fetch(`/api/admin/products?images=1&ids=${Number(product.id)}&v=${Date.now()}`);
       const data = await response.json();
       const image = data.images?.[0]?.image || "";
       setProductForm((current) => (current.id === product.id ? { ...current, image } : current));
