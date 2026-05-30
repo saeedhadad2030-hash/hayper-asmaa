@@ -17,7 +17,10 @@ export async function GET(request) {
     );
   }
   return Response.json({
-    products: await listProducts({ admin: true })
+    products: await listProducts({
+  admin: true,
+  withImages: true
+})
   });
 }
 
