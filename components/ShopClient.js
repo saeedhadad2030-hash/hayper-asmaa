@@ -29,6 +29,7 @@ const tabs = [
 ];
 
 const PRODUCT_BATCH_SIZE = 48;
+const EMPTY_PRODUCTS = [];
 
 function Logo() {
   return (
@@ -55,7 +56,7 @@ function ProductImage({ product }) {
   );
 }
 
-export default function ShopClient({ initialProducts = [], initialProductsError = "" }) {
+export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialProductsError = "" }) {
   const [products, setProducts] = useState(initialProducts);
   const [productsLoading, setProductsLoading] = useState(initialProducts.length === 0 && !initialProductsError);
   const [productsError, setProductsError] = useState(initialProductsError);
@@ -80,7 +81,10 @@ export default function ShopClient({ initialProducts = [], initialProductsError 
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
     const hasInitialProducts = initialProducts.length > 0;
+    let hasFallbackProducts = hasInitialProducts;
     if (hasInitialProducts) {
       try {
         localStorage.setItem("hyperProductsCache", JSON.stringify(initialProducts));
@@ -89,6 +93,7 @@ export default function ShopClient({ initialProducts = [], initialProductsError 
       try {
         const cachedProducts = JSON.parse(localStorage.getItem("hyperProductsCache") || "[]");
         if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
+          hasFallbackProducts = true;
           setProducts(cachedProducts);
           setProductsLoading(false);
           setProductsError("");
@@ -101,8 +106,11 @@ export default function ShopClient({ initialProducts = [], initialProductsError 
       setProductsLoading(true);
       setProductsError("");
     }
-    fetch("/api/products")
-      .then((res) => res.json())
+    fetch("/api/products", { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Products request failed");
+        return res.json();
+      })
       .then((data) => {
         if (!active) return;
         const nextProducts = data.products || [];
@@ -113,15 +121,18 @@ export default function ShopClient({ initialProducts = [], initialProductsError 
       })
       .catch(() => {
         if (!active) return;
-        setProductsError("تعذر تحميل المنتجات. جرب تحديث الصفحة.");
+        setProductsError((current) => (hasFallbackProducts ? current : "تعذر تحميل المنتجات. جرب تحديث الصفحة."));
       })
       .finally(() => {
+        window.clearTimeout(timeout);
         if (active) setProductsLoading(false);
       });
     return () => {
       active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, [initialProducts, initialProductsError]);
+  }, []);
 
   useEffect(() => {
     setVisibleLimit(PRODUCT_BATCH_SIZE);
