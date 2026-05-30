@@ -47,8 +47,7 @@ export async function POST(request) {
   const paymentMethod = body.paymentMethod === "vodafone" ? "vodafone" : "instapay";
   const payment = getPaymentMeta(paymentMethod);
   const deposit = calculateDeposit(subtotal, paymentMethod);
-  const receiptImage = normalizeText(body.receiptImage);
-  const status = receiptImage ? "في انتظار مراجعة الإيصال" : "في انتظار التحويل";
+  const status = "في انتظار التحويل";
 
   const deliveryDate = getDeliveryDate();
   const orderId = await createOrder({
@@ -62,7 +61,7 @@ export async function POST(request) {
     fee: deposit.fee,
     paymentMethod,
     paymentNumber: payment.number,
-    receiptImage: receiptImage || null,
+    receiptImage: null,
     status,
     deliveryDate
   });

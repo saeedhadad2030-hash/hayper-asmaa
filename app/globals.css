@@ -878,12 +878,10 @@ footer a {
   font-size: 20px;
 }
 
-.upload-box input,
 .image-input input {
   display: none;
 }
 
-.upload-box span,
 .image-input {
   display: inline-flex !important;
   align-items: center;
@@ -903,7 +901,6 @@ footer a {
   font-weight: 800;
 }
 
-.checkout-receipt-preview,
 .receipt-preview {
   display: grid;
   grid-template-columns: 86px 1fr;
@@ -915,7 +912,6 @@ footer a {
   background: #fff;
 }
 
-.checkout-receipt-preview img,
 .receipt-preview img {
   width: 86px;
   height: 86px;
@@ -923,12 +919,6 @@ footer a {
   border-radius: 8px;
   border: 1px solid #e5e0d5;
   background: #f7f4ec;
-}
-
-.checkout-receipt-preview span {
-  color: var(--green-2);
-  font-weight: 800;
-  line-height: 1.6;
 }
 
 .admin-login,

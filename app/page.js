@@ -28,15 +28,6 @@ const tabs = [
   { id: "facebook", label: "تابعنا ع الفيس", icon: Share2 }
 ];
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function Logo() {
   return (
     <div className="brand-mark" aria-label="هايبر أسماء">
@@ -72,8 +63,6 @@ export default function HomePage() {
   const [adminRevealCount, setAdminRevealCount] = useState(0);
   const [toast, setToast] = useState(null);
   const [cartBump, setCartBump] = useState(false);
-  const [receiptName, setReceiptName] = useState("");
-  const [receiptFile, setReceiptFile] = useState(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [form, setForm] = useState({
@@ -81,8 +70,7 @@ export default function HomePage() {
     phone: "",
     address: "",
     notes: "",
-    paymentMethod: "instapay",
-    receiptImage: ""
+    paymentMethod: "instapay"
   });
 
   useEffect(() => {
@@ -95,7 +83,7 @@ export default function HomePage() {
     try {
       const saved = JSON.parse(localStorage.getItem("hyperCheckout") || "{}");
       if (Array.isArray(saved.cart)) setCart(saved.cart);
-      if (saved.form) setForm((current) => ({ ...current, ...saved.form, receiptImage: "" }));
+      if (saved.form) setForm((current) => ({ ...current, ...saved.form }));
     } catch {
       localStorage.removeItem("hyperCheckout");
     }
@@ -106,7 +94,7 @@ export default function HomePage() {
       "hyperCheckout",
       JSON.stringify({
         cart,
-        form: { ...form, receiptImage: "" },
+        form,
       })
     );
   }, [cart, form]);
@@ -195,15 +183,6 @@ export default function HomePage() {
     );
   }
 
-  async function handleReceipt(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
-    setReceiptFile(file);
-    setReceiptName(file.name);
-    setForm((current) => ({ ...current, receiptImage: dataUrl }));
-  }
-
   async function submitOrder(event) {
     event.preventDefault();
     setMessage("");
@@ -233,7 +212,6 @@ export default function HomePage() {
     const orderItemsText = cart
       .map((item) => `- ${item.name} × ${item.quantity} = ${money(item.price * item.quantity)}`)
       .join("\n");
-    const receiptText = form.receiptImage ? "الإيصال: مرفوع داخل لوحة الإدارة" : "الإيصال: لم يتم رفع إيصال";
     const whatsappMessage = [
       "طلب حجز جديد - هايبر أسماء",
       "-------------------------",
@@ -253,28 +231,11 @@ export default function HomePage() {
       `طريقة الدفع: ${payment.label}`,
       `رقم التحويل: ${data.order.paymentNumber}`,
       `التوصيل المتوقع: ${data.order.deliveryDate}`,
-      receiptText,
       form.notes ? `ملاحظات: ${form.notes}` : ""
     ]
       .filter(Boolean)
       .join("\n");
-    const canShareReceipt =
-      receiptFile &&
-      navigator.canShare &&
-      navigator.canShare({ files: [receiptFile] });
-    if (canShareReceipt) {
-      try {
-        await navigator.share({
-          title: `طلب هايبر أسماء #${data.order.id}`,
-          text: whatsappMessage,
-          files: [receiptFile]
-        });
-      } catch {
-        window.open(`https://wa.me/201031367037?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
-      }
-    } else {
-      window.open(`https://wa.me/201031367037?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
-    }
+    window.open(`https://wa.me/201031367037?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
     setMessage(`تم تسجيل الطلب رقم ${data.order.id}. الإدارة هتراجعه وتأكد الحجز.`);
     setCart([]);
     setForm({
@@ -282,12 +243,9 @@ export default function HomePage() {
       phone: "",
       address: "",
       notes: "",
-      paymentMethod: "instapay",
-      receiptImage: ""
+      paymentMethod: "instapay"
     });
-    setReceiptFile(null);
     localStorage.removeItem("hyperCheckout");
-    setReceiptName("");
   }
 
   return (
@@ -517,18 +475,6 @@ export default function HomePage() {
                   <strong>{payment.number}</strong>
                 </div>
               </div>
-
-              <label className="upload-box">
-                صورة إيصال التحويل
-                <input type="file" accept="image/*" onChange={handleReceipt} />
-                <span>{receiptName || "اختار صورة الإيصال"}</span>
-              </label>
-              {form.receiptImage && (
-                <div className="checkout-receipt-preview">
-                  <img src={form.receiptImage} alt="معاينة إيصال التحويل" />
-                  <span>الإيصال جاهز وهيظهر في لوحة الإدارة.</span>
-                </div>
-              )}
 
               {message && <p className="form-message">{message}</p>}
               <button className="primary-action" disabled={sending || cart.length === 0}>
