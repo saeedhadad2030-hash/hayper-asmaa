@@ -30,6 +30,19 @@ const tabs = [
 
 const PRODUCT_BATCH_SIZE = 48;
 const EMPTY_PRODUCTS = [];
+const PRODUCTS_CACHE_KEY = "hyperProductsCache:v3";
+
+function mergeProductImages(previousProducts, nextProducts) {
+  const previousImages = new Map(
+    previousProducts
+      .filter((product) => product.image)
+      .map((product) => [Number(product.id), product.image])
+  );
+  return nextProducts.map((product) => ({
+    ...product,
+    image: product.image || previousImages.get(Number(product.id)) || ""
+  }));
+}
 
 function Logo() {
   return (
@@ -44,8 +57,35 @@ function Logo() {
 }
 
 function ProductImage({ product }) {
-  if (product.image) {
-    return <img src={product.image} alt={product.name} loading="lazy" decoding="async" />;
+  const [failed, setFailed] = useState(false);
+  const [useProxy, setUseProxy] = useState(false);
+  const image = String(product.image || "").trim();
+  const imageVersion = encodeURIComponent(image.slice(-36));
+  const proxySrc = `/api/product-image/${product.id}?v=${imageVersion}`;
+  const imageSrc = !image || image.startsWith("data:image/") || !useProxy ? image : proxySrc;
+
+  useEffect(() => {
+    setFailed(false);
+    setUseProxy(false);
+  }, [image]);
+
+  if (image && !failed) {
+    return (
+      <img
+        src={imageSrc}
+        alt={product.name}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => {
+          if (!image.startsWith("data:image/") && !useProxy) {
+            setUseProxy(true);
+            return;
+          }
+          setFailed(true);
+        }}
+      />
+    );
   }
 
   return (
@@ -87,11 +127,12 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     let hasFallbackProducts = hasInitialProducts;
     if (hasInitialProducts) {
       try {
-        localStorage.setItem("hyperProductsCache", JSON.stringify(initialProducts));
+        localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(initialProducts));
       } catch {}
     } else {
       try {
-        const cachedProducts = JSON.parse(localStorage.getItem("hyperProductsCache") || "[]");
+        localStorage.removeItem("hyperProductsCache");
+        const cachedProducts = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || "[]");
         if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
           hasFallbackProducts = true;
           setProducts(cachedProducts);
@@ -99,7 +140,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           setProductsError("");
         }
       } catch {
-        localStorage.removeItem("hyperProductsCache");
+        localStorage.removeItem(PRODUCTS_CACHE_KEY);
       }
     }
     if (!hasInitialProducts) {
@@ -114,10 +155,13 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       .then((data) => {
         if (!active) return;
         const nextProducts = data.products || [];
-        setProducts(nextProducts);
-        try {
-          localStorage.setItem("hyperProductsCache", JSON.stringify(nextProducts));
-        } catch {}
+        setProducts((current) => {
+          const mergedProducts = mergeProductImages(current, nextProducts);
+          try {
+            localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(mergedProducts));
+          } catch {}
+          return mergedProducts;
+        });
       })
       .catch(() => {
         if (!active) return;

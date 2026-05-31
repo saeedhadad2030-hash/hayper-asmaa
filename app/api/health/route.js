@@ -9,6 +9,7 @@ export async function GET() {
     hasSupabase: hasSupabase(),
     supabaseHost: null,
     productsCount: null,
+    productsWithImages: null,
     passwordSetting: null,
     error: null
   };
@@ -20,6 +21,9 @@ export async function GET() {
 
     const products = await listProducts();
     result.productsCount = products.length;
+    result.productsWithImages = (await listProducts({ withImages: true })).filter((product) =>
+      Boolean(String(product.image || "").trim())
+    ).length;
     result.passwordSetting = await getPasswordAudit();
   } catch (error) {
     result.ok = false;

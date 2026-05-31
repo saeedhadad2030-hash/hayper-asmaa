@@ -27,7 +27,20 @@ const blankProduct = {
 };
 
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
-const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache";
+const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache:v3";
+const SHOP_PRODUCTS_CACHE_KEY = "hyperProductsCache:v3";
+
+function mergeProductImages(previousProducts, nextProducts) {
+  const previousImages = new Map(
+    previousProducts
+      .filter((product) => product.image)
+      .map((product) => [Number(product.id), product.image])
+  );
+  return nextProducts.map((product) => ({
+    ...product,
+    image: product.image || previousImages.get(Number(product.id)) || ""
+  }));
+}
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -74,6 +87,13 @@ function normalizeProductForState(product) {
 function cacheAdminProducts(products) {
   try {
     localStorage.setItem(ADMIN_PRODUCTS_CACHE_KEY, JSON.stringify(products));
+  } catch {}
+}
+
+function clearShopProductsCache() {
+  try {
+    localStorage.removeItem("hyperProductsCache");
+    localStorage.removeItem(SHOP_PRODUCTS_CACHE_KEY);
   } catch {}
 }
 
@@ -184,6 +204,7 @@ function AdminDashboard({ onLogout }) {
 
   useEffect(() => {
     try {
+      localStorage.removeItem("hyperAdminProductsCache");
       const cachedProducts = JSON.parse(localStorage.getItem(ADMIN_PRODUCTS_CACHE_KEY) || "[]");
       if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
         setProducts(cachedProducts.map(normalizeProductForState));
@@ -230,7 +251,7 @@ function AdminDashboard({ onLogout }) {
       .then((res) => res.json())
       .then((productData) => {
         const nextProducts = (productData.products || []).map(normalizeProductForState);
-        updateProductsState(nextProducts);
+        updateProductsState((current) => mergeProductImages(current, nextProducts));
       })
       .catch(() => {
         setDashboardError("تعذر تحميل منتجات لوحة الإدارة. جرب تحديث الصفحة.");
@@ -280,6 +301,7 @@ function AdminDashboard({ onLogout }) {
           ? current.map((product) => (product.id === savedProduct.id ? savedProduct : product))
           : [savedProduct, ...current]
       );
+      clearShopProductsCache();
       setProductForm(blankProduct);
     } catch (err) {
       setProductActionError(err.message || "تعذر حفظ المنتج");
@@ -305,6 +327,7 @@ function AdminDashboard({ onLogout }) {
         const data = await response.json();
         throw new Error(data.error || "تعذر حذف المنتج");
       }
+      clearShopProductsCache();
     } catch (err) {
       updateProductsState((current) =>
         current.some((product) => product.id === id) ? current : [removedProduct, ...current]
