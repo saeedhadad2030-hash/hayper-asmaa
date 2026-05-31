@@ -27,8 +27,8 @@ const blankProduct = {
 };
 
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
-const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache:v3";
-const SHOP_PRODUCTS_CACHE_KEY = "hyperProductsCache:v3";
+const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache:v4";
+const SHOP_PRODUCTS_CACHE_KEY = "hyperProductsCache:v4";
 
 function mergeProductImages(previousProducts, nextProducts) {
   const previousImages = new Map(
@@ -93,6 +93,7 @@ function cacheAdminProducts(products) {
 function clearShopProductsCache() {
   try {
     localStorage.removeItem("hyperProductsCache");
+    localStorage.removeItem("hyperProductsCache:v3");
     localStorage.removeItem(SHOP_PRODUCTS_CACHE_KEY);
   } catch {}
 }
@@ -175,6 +176,20 @@ export default function AdminAccess({ embedded = false, onClose }) {
         </form>
       )}
     </section>
+  );
+}
+
+function AdminProductThumb({ product }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <span className="tiny-placeholder" />;
+  return (
+    <img
+      src={`/api/product-image/${product.id}`}
+      alt={product.name}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
   );
 }
 
@@ -641,7 +656,7 @@ function AdminDashboard({ onLogout }) {
             )}
             {!dashboardLoading && !dashboardError && displayedAdminProducts.map((product) => (
               <article key={product.id} className={!product.available ? "muted" : ""}>
-                {product.image ? <img src={product.image} alt={product.name} loading="lazy" decoding="async" /> : <span className="tiny-placeholder" />}
+                <AdminProductThumb product={product} />
                 <div>
                   <strong>{product.name}</strong>
                   <span>

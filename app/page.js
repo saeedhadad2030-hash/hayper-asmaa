@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   try {
-    const products = await listProducts({ withImages: true });
+    const products = await listProducts();
     return <ShopClient initialProducts={products} />;
   } catch {
     return <ShopClient initialProductsError="تعذر تحميل المنتجات. جرب تحديث الصفحة." />;

@@ -1,5 +1,5 @@
 import { getPasswordAudit } from "@/lib/auth";
-import { getSupabaseBaseUrl, hasSupabase, listProducts } from "@/lib/store";
+import { countProductsWithImages, getSupabaseBaseUrl, hasSupabase, listProducts } from "@/lib/store";
 
 export const runtime = "nodejs";
 
@@ -21,9 +21,7 @@ export async function GET() {
 
     const products = await listProducts();
     result.productsCount = products.length;
-    result.productsWithImages = (await listProducts({ withImages: true })).filter((product) =>
-      Boolean(String(product.image || "").trim())
-    ).length;
+    result.productsWithImages = await countProductsWithImages();
     result.passwordSetting = await getPasswordAudit();
   } catch (error) {
     result.ok = false;

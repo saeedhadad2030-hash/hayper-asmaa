@@ -30,7 +30,7 @@ const tabs = [
 
 const PRODUCT_BATCH_SIZE = 48;
 const EMPTY_PRODUCTS = [];
-const PRODUCTS_CACHE_KEY = "hyperProductsCache:v3";
+const PRODUCTS_CACHE_KEY = "hyperProductsCache:v4";
 
 function mergeProductImages(previousProducts, nextProducts) {
   const previousImages = new Map(
@@ -62,14 +62,18 @@ function ProductImage({ product }) {
   const image = String(product.image || "").trim();
   const imageVersion = encodeURIComponent(image.slice(-36));
   const proxySrc = `/api/product-image/${product.id}?v=${imageVersion}`;
-  const imageSrc = !image || image.startsWith("data:image/") || !useProxy ? image : proxySrc;
+  const imageSrc = image
+    ? image.startsWith("data:image/") || !useProxy
+      ? image
+      : proxySrc
+    : proxySrc;
 
   useEffect(() => {
     setFailed(false);
     setUseProxy(false);
   }, [image]);
 
-  if (image && !failed) {
+  if (!failed) {
     return (
       <img
         src={imageSrc}
@@ -78,7 +82,7 @@ function ProductImage({ product }) {
         decoding="async"
         referrerPolicy="no-referrer"
         onError={() => {
-          if (!image.startsWith("data:image/") && !useProxy) {
+          if (image && !image.startsWith("data:image/") && !useProxy) {
             setUseProxy(true);
             return;
           }

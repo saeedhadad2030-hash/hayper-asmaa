@@ -1,13 +1,13 @@
 import { isAdmin, unauthorized } from "@/lib/auth";
 import { uploadProductImageDataUrl } from "@/lib/product-images";
-import { createProduct, deleteProduct, deleteProducts, listProducts, updateProduct } from "@/lib/store";
+import { createProduct, deleteProduct, deleteProducts, getProduct, listProducts, updateProduct } from "@/lib/store";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   if (!(await isAdmin())) return unauthorized();
   return Response.json({
-    products: await listProducts({ admin: true, withImages: true })
+    products: await listProducts({ admin: true })
   });
 }
 
@@ -31,8 +31,7 @@ export async function POST(request) {
 export async function PUT(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
-  const existingProducts = await listProducts({ admin: true, withImages: true });
-  const existing = existingProducts.find((product) => Number(product.id) === Number(body.id));
+  const existing = await getProduct(Number(body.id), { withImage: true });
   const product = {
     id: Number(body.id),
     name: String(body.name || "").trim(),
@@ -42,7 +41,7 @@ export async function PUT(request) {
     offerActive: body.offerActive ? 1 : 0,
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available ? 1 : 0,
-    image: body.image ?? existing?.image ?? null
+    image: body.image ? body.image : existing?.image ?? null
   };
   await updateProduct(product);
   return Response.json({ product });
