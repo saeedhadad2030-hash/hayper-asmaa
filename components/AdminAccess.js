@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   CheckCircle2,
@@ -27,12 +27,7 @@ const blankProduct = {
 };
 
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
-const ADMIN_IMAGE_BATCH_SIZE = 10;
 const ADMIN_PRODUCTS_CACHE_KEY = "hyperAdminProductsCache";
-
-function stripProductImages(products) {
-  return products.map(({ image, _imageChecked, ...product }) => product);
-}
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -78,7 +73,7 @@ function normalizeProductForState(product) {
 
 function cacheAdminProducts(products) {
   try {
-    localStorage.setItem(ADMIN_PRODUCTS_CACHE_KEY, JSON.stringify(stripProductImages(products)));
+    localStorage.setItem(ADMIN_PRODUCTS_CACHE_KEY, JSON.stringify(products));
   } catch {}
 }
 
@@ -176,8 +171,9 @@ function AdminDashboard({ onLogout }) {
   const [productActionError, setProductActionError] = useState("");
   const [dedupeMessage, setDedupeMessage] = useState("");
   const [deduping, setDeduping] = useState(false);
+  const [imageMigrationMessage, setImageMigrationMessage] = useState("");
+  const [migratingImages, setMigratingImages] = useState(false);
   const [deletingIds, setDeletingIds] = useState(new Set());
-  const requestedImageIds = useRef(new Set());
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -190,7 +186,7 @@ function AdminDashboard({ onLogout }) {
     try {
       const cachedProducts = JSON.parse(localStorage.getItem(ADMIN_PRODUCTS_CACHE_KEY) || "[]");
       if (Array.isArray(cachedProducts) && cachedProducts.length > 0) {
-        setProducts(stripProductImages(cachedProducts).map(normalizeProductForState));
+        setProducts(cachedProducts.map(normalizeProductForState));
         setDashboardLoading(false);
       }
     } catch {
@@ -217,16 +213,6 @@ function AdminDashboard({ onLogout }) {
   }, [products, productSearch]);
 
   const displayedAdminProducts = filteredProducts.slice(0, productLimit);
-
-  useEffect(() => {
-  fetch("/api/admin/products")
-    .then((res) => res.json())
-    .then((data) => {
-      updateProductsState(
-        (data.products || []).map(normalizeProductForState)
-      );
-    });
-}, []);
 
   function updateProductsState(updater) {
     setProducts((current) => {
@@ -333,25 +319,14 @@ function AdminDashboard({ onLogout }) {
     }
   }
 
-  async function editProduct(product) {
-    const baseProduct = {
+  function editProduct(product) {
+    setProductForm({
       ...product,
       originalPrice: product.originalPrice || "",
       offerActive: Boolean(product.offerActive),
       variablePrice: Boolean(product.variablePrice),
       available: Boolean(product.available)
-    };
-    setProductForm(baseProduct);
-    if (product.image || product._imageChecked) return;
-    try {
-      const response = await fetch(`/api/admin/products?images=1&ids=${Number(product.id)}&v=${Date.now()}`);
-      const data = await response.json();
-      const image = data.images?.[0]?.image || "";
-      setProductForm((current) => (current.id === product.id ? { ...current, image } : current));
-      updateProductsState((current) =>
-        current.map((item) => (item.id === product.id ? { ...item, image, _imageChecked: true } : item))
-      );
-    } catch {}
+    });
   }
 
   async function dedupeProducts() {
@@ -389,6 +364,37 @@ function AdminDashboard({ onLogout }) {
       setProductActionError(err.message || "تعذر تنضيف المنتجات المكررة");
     } finally {
       setDeduping(false);
+    }
+  }
+
+  async function migrateLegacyImages() {
+    setProductActionError("");
+    setImageMigrationMessage("");
+    setMigratingImages(true);
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "migrateImages", limit: 8 })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "تعذر تحويل الصور لروابط خفيفة");
+
+      const migratedProducts = new Map(
+        (data.migratedProducts || []).map((product) => [Number(product.id), normalizeProductForState(product)])
+      );
+      updateProductsState((current) =>
+        current.map((product) => migratedProducts.get(Number(product.id)) || product)
+      );
+      setImageMigrationMessage(
+        data.migratedCount > 0
+          ? `تم تحويل ${data.migratedCount} صورة. المتبقي ${data.remainingCount}. كرر الضغط لحد ما المتبقي يبقى 0.`
+          : "كل الصور بالفعل خفيفة ومرفوعة كرابط."
+      );
+    } catch (err) {
+      setProductActionError(err.message || "تعذر تحويل الصور لروابط خفيفة");
+    } finally {
+      setMigratingImages(false);
     }
   }
 
@@ -591,6 +597,9 @@ function AdminDashboard({ onLogout }) {
             <button type="button" onClick={dedupeProducts} disabled={deduping || dashboardLoading}>
               {deduping ? "جاري التنضيف..." : "تنضيف المكرر"}
             </button>
+            <button type="button" onClick={migrateLegacyImages} disabled={migratingImages || dashboardLoading}>
+              {migratingImages ? "\u062c\u0627\u0631\u064a \u062a\u062e\u0641\u064a\u0641 \u0627\u0644\u0635\u0648\u0631..." : "\u062a\u062e\u0641\u064a\u0641 \u0627\u0644\u0635\u0648\u0631"}
+            </button>
             <input
               value={productSearch}
               onChange={(event) => setProductSearch(event.target.value)}
@@ -599,6 +608,7 @@ function AdminDashboard({ onLogout }) {
           </div>
           {productActionError && <p className="admin-action-error">{productActionError}</p>}
           {dedupeMessage && <p className="admin-action-success">{dedupeMessage}</p>}
+          {imageMigrationMessage && <p className="admin-action-success">{imageMigrationMessage}</p>}
           <div className="admin-list">
             {dashboardLoading && (
               <p className="admin-empty">جاري تحميل المنتجات...</p>

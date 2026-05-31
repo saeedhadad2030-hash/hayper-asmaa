@@ -1,26 +1,13 @@
 import { isAdmin, unauthorized } from "@/lib/auth";
-import { createProduct, deleteProduct, deleteProducts, listProductImages, listProducts, updateProduct } from "@/lib/store";
+import { uploadProductImageDataUrl } from "@/lib/product-images";
+import { createProduct, deleteProduct, deleteProducts, listProducts, updateProduct } from "@/lib/store";
 
 export const runtime = "nodejs";
 
-export async function GET(request) {
+export async function GET() {
   if (!(await isAdmin())) return unauthorized();
-  const url = new URL(request.url);
-  const ids = String(url.searchParams.get("ids") || "")
-    .split(",")
-    .map((id) => Number(id))
-    .filter(Boolean);
-  if (url.searchParams.get("images") === "1") {
-    return Response.json(
-      { images: await listProductImages(ids) },
-      { headers: { "Cache-Control": "no-store" } }
-    );
-  }
   return Response.json({
-    products: await listProducts({
-  admin: true,
-  withImages: true
-})
+    products: await listProducts({ admin: true, withImages: true })
   });
 }
 
@@ -44,26 +31,19 @@ export async function POST(request) {
 export async function PUT(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
-  const existingProducts = await listProducts({
-  admin: true,
-  withImages: true
-});
-
-const existing = existingProducts.find(
-  (p) => Number(p.id) === Number(body.id)
-);
-
-const product = {
-  id: Number(body.id),
-  name: String(body.name || "").trim(),
+  const existingProducts = await listProducts({ admin: true, withImages: true });
+  const existing = existingProducts.find((product) => Number(product.id) === Number(body.id));
+  const product = {
+    id: Number(body.id),
+    name: String(body.name || "").trim(),
   category: String(body.category || "حلويات شريف الزيني").trim(),
-  price: Number(body.price) || 0,
-  originalPrice: Number(body.originalPrice) || null,
-  offerActive: body.offerActive ? 1 : 0,
-  variablePrice: body.variablePrice ? 1 : 0,
-  available: body.available ? 1 : 0,
-  image: body.image ?? existing?.image ?? null
-};
+    price: Number(body.price) || 0,
+    originalPrice: Number(body.originalPrice) || null,
+    offerActive: body.offerActive ? 1 : 0,
+    variablePrice: body.variablePrice ? 1 : 0,
+    available: body.available ? 1 : 0,
+    image: body.image ?? existing?.image ?? null
+  };
   await updateProduct(product);
   return Response.json({ product });
 }
@@ -74,6 +54,10 @@ function productKey(product) {
 
 function hasImage(product) {
   return Boolean(String(product.image || "").trim());
+}
+
+function hasDataUrlImage(product) {
+  return String(product.image || "").startsWith("data:image/");
 }
 
 function sameProductData(first, second) {
@@ -92,6 +76,26 @@ function sameProductData(first, second) {
 export async function PATCH(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
+  if (body.action === "migrateImages") {
+    const limit = Math.min(Math.max(Number(body.limit) || 8, 1), 12);
+    const products = await listProducts({ admin: true, withImages: true });
+    const dataUrlProducts = products.filter(hasDataUrlImage);
+    const migratedProducts = [];
+
+    for (const product of dataUrlProducts.slice(0, limit)) {
+      const image = await uploadProductImageDataUrl(product.image);
+      const migratedProduct = { ...product, image };
+      await updateProduct(migratedProduct);
+      migratedProducts.push(migratedProduct);
+    }
+
+    return Response.json({
+      ok: true,
+      migratedCount: migratedProducts.length,
+      remainingCount: Math.max(0, dataUrlProducts.length - migratedProducts.length),
+      migratedProducts
+    });
+  }
   if (body.action !== "dedupe") return Response.json({ error: "إجراء غير معروف" }, { status: 400 });
 
   const products = await listProducts({ admin: true, withImages: true });
