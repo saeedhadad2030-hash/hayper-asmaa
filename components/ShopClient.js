@@ -248,9 +248,16 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     return sortCategories(raw);
   }, [products]);
 
+  // Build a category order map for sorting products
+  const categoryOrder = useMemo(() => {
+    const order = new Map();
+    categories.forEach((cat, index) => order.set(cat, index));
+    return order;
+  }, [categories]);
+
   const visibleProducts = useMemo(() => {
     const search = query.trim();
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
       const matchesTab =
         activeTab === "offers"
           ? Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price)
@@ -262,7 +269,14 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       const matchesSearch = search ? product.name.includes(search) : true;
       return matchesTab && matchesSearch;
     });
-  }, [products, query, activeTab, categories]);
+    // Sort products: تورت always last
+    return filtered.sort((a, b) => {
+      const orderA = categoryOrder.get(a.category) ?? 50;
+      const orderB = categoryOrder.get(b.category) ?? 50;
+      if (orderA !== orderB) return orderA - orderB;
+      return 0;
+    });
+  }, [products, query, activeTab, categories, categoryOrder]);
 
   const offerProducts = useMemo(
     () => products.filter((product) => Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price)),
