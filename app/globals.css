@@ -1858,6 +1858,39 @@ footer a {
   }
 }
 
+/* Remove image button */
+.image-preview-wrap {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.image-preview-wrap .admin-preview {
+  border-radius: 10px;
+}
+
+.remove-image-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid rgba(200, 50, 60, 0.3);
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #c0392b;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.remove-image-btn:hover {
+  background: #fde8e8;
+  border-color: #c0392b;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

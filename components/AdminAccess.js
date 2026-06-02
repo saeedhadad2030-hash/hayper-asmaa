@@ -717,7 +717,15 @@ function AdminDashboard({ onLogout }) {
               رفع صورة المنتج
               <input type="file" accept="image/*" onChange={handleProductImage} />
             </label>
-            {productForm.image && <img className="admin-preview" src={productForm.image} alt="معاينة المنتج" />}
+            {productForm.image && (
+              <div className="image-preview-wrap">
+                <img className="admin-preview" src={productForm.image.startsWith("data:") ? productForm.image : `/api/product-image/${productForm.id}?v=${Date.now()}`} alt="معاينة المنتج" />
+                <button type="button" className="remove-image-btn" onClick={() => setProductForm({ ...productForm, image: "" })}>
+                  <Trash2 size={14} />
+                  إزالة الصورة
+                </button>
+              </div>
+            )}
             <div className="form-actions">
               <button className="primary-action" disabled={saving}>
                 <Save size={18} />
