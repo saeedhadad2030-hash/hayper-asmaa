@@ -1,6 +1,6 @@
 import { isAdmin, unauthorized } from "@/lib/auth";
 import { uploadProductImageDataUrl } from "@/lib/product-images";
-import { createProduct, deleteProduct, deleteProducts, getProduct, listProducts, updateProduct } from "@/lib/store";
+import { createProduct, deleteProduct, deleteProducts, ensureCategory, getProduct, listProducts, updateProduct } from "@/lib/store";
 
 export const runtime = "nodejs";
 
@@ -22,8 +22,10 @@ export async function POST(request) {
     offerActive: body.offerActive ? 1 : 0,
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available === false ? 0 : 1,
+    stock: body.stock === null || body.stock === undefined || body.stock === "" ? null : Number(body.stock),
     image: body.image || null
   };
+  await ensureCategory(product.category);
   const id = await createProduct(product);
   return Response.json({ product: { ...product, id: Number(id) } });
 }
@@ -35,14 +37,16 @@ export async function PUT(request) {
   const product = {
     id: Number(body.id),
     name: String(body.name || "").trim(),
-  category: String(body.category || "حلويات شريف الزيني").trim(),
+    category: String(body.category || "حلويات شريف الزيني").trim(),
     price: Number(body.price) || 0,
     originalPrice: Number(body.originalPrice) || null,
     offerActive: body.offerActive ? 1 : 0,
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available ? 1 : 0,
+    stock: body.stock === null || body.stock === undefined || body.stock === "" ? null : Number(body.stock),
     image: body.image ? body.image : existing?.image ?? null
   };
+  await ensureCategory(product.category);
   await updateProduct(product);
   return Response.json({ product });
 }

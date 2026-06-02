@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   CheckCircle2,
+  FolderPlus,
   ImagePlus,
   LogOut,
   PackagePlus,
   Pencil,
   Save,
   Trash2,
-  X
+  X,
+  ArrowUp,
+  ArrowDown,
+  Package
 } from "lucide-react";
 import { money, ORDER_STATUSES, PAYMENT, readOrderItems } from "@/lib/shop";
 
@@ -23,6 +27,8 @@ const blankProduct = {
   offerActive: false,
   variablePrice: false,
   available: true,
+  stock: "",
+  stockMode: "unlimited",
   image: ""
 };
 
@@ -80,7 +86,9 @@ function normalizeProductForState(product) {
     originalPrice: product.originalPrice == null ? "" : Number(product.originalPrice),
     offerActive: Boolean(product.offerActive),
     variablePrice: Boolean(product.variablePrice),
-    available: Boolean(product.available)
+    available: Boolean(product.available),
+    stock: product.stock === null || product.stock === undefined ? "" : Number(product.stock),
+    stockMode: product.stock === null || product.stock === undefined ? "unlimited" : "limited"
   };
 }
 
@@ -108,6 +116,43 @@ async function uploadProductImageIfNeeded(image) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || "تعذر رفع صورة المنتج");
   return data.url;
+}
+
+// Lazy thumbnail for admin list
+function AdminProductThumb({ product }) {
+  const [failed, setFailed] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px 0px", threshold: 0.01 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  if (failed) return <span ref={ref} className="tiny-placeholder" />;
+  return visible ? (
+    <img
+      ref={ref}
+      src={`/api/product-image/${product.id}?size=thumb`}
+      alt={product.name}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  ) : (
+    <span ref={ref} className="tiny-placeholder shimmer" />
+  );
 }
 
 export default function AdminAccess({ embedded = false, onClose }) {
@@ -179,20 +224,6 @@ export default function AdminAccess({ embedded = false, onClose }) {
   );
 }
 
-function AdminProductThumb({ product }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <span className="tiny-placeholder" />;
-  return (
-    <img
-      src={`/api/product-image/${product.id}`}
-      alt={product.name}
-      loading="lazy"
-      decoding="async"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
 function AdminDashboard({ onLogout }) {
   const [products, setProducts] = useState([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -216,6 +247,13 @@ function AdminDashboard({ onLogout }) {
   });
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordAudit, setPasswordAudit] = useState(null);
+
+  // Category management state
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategorySortOrder, setNewCategorySortOrder] = useState("");
+  const [categoryMessage, setCategoryMessage] = useState("");
+  const [savingCategory, setSavingCategory] = useState(false);
 
   useEffect(() => {
     try {
@@ -278,15 +316,17 @@ function AdminDashboard({ onLogout }) {
     const metaLoad = Promise.all([
       fetch("/api/admin/orders"),
       fetch("/api/admin/stats"),
-      fetch("/api/admin/password")
+      fetch("/api/admin/password"),
+      fetch("/api/admin/categories")
     ])
-      .then(([orderRes, statsRes, passwordRes]) =>
-        Promise.all([orderRes.json(), statsRes.json(), passwordRes.json()])
+      .then(([orderRes, statsRes, passwordRes, catRes]) =>
+        Promise.all([orderRes.json(), statsRes.json(), passwordRes.json(), catRes.json()])
       )
-      .then(([orderData, statsData, passwordData]) => {
+      .then(([orderData, statsData, passwordData, catData]) => {
       setOrders(orderData.orders || []);
       setStats(statsData.stats || null);
       setPasswordAudit(passwordData || null);
+      setCategoriesList(catData.categories || []);
       })
       .catch(() => {});
 
@@ -299,10 +339,13 @@ function AdminDashboard({ onLogout }) {
     setSaving(true);
     try {
       const editing = Boolean(productForm.id);
+      const stockValue = productForm.stockMode === "limited" ? (productForm.stock === "" ? 0 : Number(productForm.stock)) : null;
       const payload = {
         ...productForm,
+        stock: stockValue,
         image: await uploadProductImageIfNeeded(productForm.image)
       };
+      delete payload.stockMode;
       const response = await fetch("/api/admin/products", {
         method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -318,11 +361,21 @@ function AdminDashboard({ onLogout }) {
       );
       clearShopProductsCache();
       setProductForm(blankProduct);
+      // Refresh categories in case a new one was created
+      refreshCategories();
     } catch (err) {
       setProductActionError(err.message || "تعذر حفظ المنتج");
     } finally {
       setSaving(false);
     }
+  }
+
+  async function refreshCategories() {
+    try {
+      const res = await fetch("/api/admin/categories");
+      const data = await res.json();
+      setCategoriesList(data.categories || []);
+    } catch {}
   }
 
   async function deleteProduct(id) {
@@ -363,7 +416,9 @@ function AdminDashboard({ onLogout }) {
       originalPrice: product.originalPrice || "",
       offerActive: Boolean(product.offerActive),
       variablePrice: Boolean(product.variablePrice),
-      available: Boolean(product.available)
+      available: Boolean(product.available),
+      stock: product.stock === null || product.stock === undefined || product.stock === "" ? "" : Number(product.stock),
+      stockMode: product.stock === null || product.stock === undefined || product.stock === "" ? "unlimited" : "limited"
     });
   }
 
@@ -480,6 +535,56 @@ function AdminDashboard({ onLogout }) {
     await refreshAll({ silent: true });
   }
 
+  // Category management
+  async function addCategory(event) {
+    event.preventDefault();
+    if (!newCategoryName.trim()) return;
+    setCategoryMessage("");
+    setSavingCategory(true);
+    try {
+      const response = await fetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategoryName.trim(), sortOrder: Number(newCategorySortOrder) || 50 })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "تعذر إضافة القسم");
+      setCategoriesList((current) => [...current, data.category].sort((a, b) => a.sortOrder - b.sortOrder));
+      setNewCategoryName("");
+      setNewCategorySortOrder("");
+      setCategoryMessage("تم إضافة القسم بنجاح");
+    } catch (err) {
+      setCategoryMessage(err.message || "تعذر إضافة القسم");
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
+  async function updateCategorySortOrder(catId, newOrder) {
+    setCategoriesList((current) =>
+      current.map((c) => (c.id === catId ? { ...c, sortOrder: newOrder } : c)).sort((a, b) => a.sortOrder - b.sortOrder)
+    );
+    try {
+      await fetch("/api/admin/categories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: catId, sortOrder: newOrder })
+      });
+    } catch {}
+  }
+
+  async function removeCategory(catId) {
+    if (!window.confirm("حذف القسم لن يحذف المنتجات الموجودة فيه. تكمل؟")) return;
+    setCategoriesList((current) => current.filter((c) => c.id !== catId));
+    try {
+      await fetch("/api/admin/categories", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: catId })
+      });
+    } catch {}
+  }
+
   return (
     <div className="admin-page-inner">
       <header className="admin-header">
@@ -547,6 +652,40 @@ function AdminDashboard({ onLogout }) {
                 placeholder="مثال: 100"
               />
             </label>
+
+            {/* Stock management */}
+            <div className="stock-control">
+              <h3><Package size={16} /> إدارة المخزون</h3>
+              <div className="stock-mode-switch">
+                <button
+                  type="button"
+                  className={productForm.stockMode === "unlimited" ? "active" : ""}
+                  onClick={() => setProductForm({ ...productForm, stockMode: "unlimited", stock: "" })}
+                >
+                  كمية غير محدودة
+                </button>
+                <button
+                  type="button"
+                  className={productForm.stockMode === "limited" ? "active" : ""}
+                  onClick={() => setProductForm({ ...productForm, stockMode: "limited", stock: productForm.stock || "0" })}
+                >
+                  كمية محدودة
+                </button>
+              </div>
+              {productForm.stockMode === "limited" && (
+                <label>
+                  عدد القطع المتاحة
+                  <input
+                    type="number"
+                    min="0"
+                    value={productForm.stock}
+                    onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })}
+                    placeholder="مثال: 10"
+                  />
+                </label>
+              )}
+            </div>
+
             <div className="toggle-row">
               <label>
                 <input
@@ -591,6 +730,63 @@ function AdminDashboard({ onLogout }) {
               )}
             </div>
           </form>
+
+          {/* Category management */}
+          <div className="category-manager">
+            <h2><FolderPlus size={20} /> إدارة الأقسام</h2>
+            <form className="category-add-form" onSubmit={addCategory}>
+              <input
+                value={newCategoryName}
+                onChange={(event) => setNewCategoryName(event.target.value)}
+                placeholder="اسم القسم الجديد"
+                required
+              />
+              <input
+                type="number"
+                value={newCategorySortOrder}
+                onChange={(event) => setNewCategorySortOrder(event.target.value)}
+                placeholder="ترتيب (رقم)"
+                min="0"
+                style={{ width: "100px" }}
+              />
+              <button className="primary-action" disabled={savingCategory}>
+                {savingCategory ? "جاري..." : "إضافة"}
+              </button>
+            </form>
+            {categoryMessage && <p className="category-msg">{categoryMessage}</p>}
+            <div className="category-list">
+              {categoriesList.map((cat) => (
+                <div className="category-item" key={cat.id}>
+                  <span className="category-name">{cat.name}</span>
+                  <span className="category-order">ترتيب: {cat.sortOrder}</span>
+                  <div className="category-actions">
+                    <button
+                      type="button"
+                      title="رفع للأعلى"
+                      onClick={() => updateCategorySortOrder(cat.id, Math.max(0, cat.sortOrder - 1))}
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      title="نزّل للأسفل"
+                      onClick={() => updateCategorySortOrder(cat.id, cat.sortOrder + 1)}
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      title="حذف القسم"
+                      onClick={() => removeCategory(cat.id)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {categoriesList.length === 0 && <p className="admin-empty">لا توجد أقسام مسجلة.</p>}
+            </div>
+          </div>
 
           <form className="password-editor" onSubmit={changePassword}>
             <h2>تغيير باسورد الإدارة</h2>
@@ -664,6 +860,7 @@ function AdminDashboard({ onLogout }) {
                     {Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price)
                       ? ` بدل ${money(product.originalPrice)}`
                       : ""}
+                    {product.stockMode === "limited" ? ` | مخزون: ${product.stock}` : ""}
                   </span>
                   {!product.available && <em>Sold Out</em>}
                 </div>

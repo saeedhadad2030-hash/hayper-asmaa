@@ -11,11 +11,14 @@ function storageHeaders(extra = {}) {
   };
 }
 
-function imageResponse(body, contentType) {
+function imageResponse(body, contentType, isThumb = false) {
   return new Response(body, {
     headers: {
       "Content-Type": contentType || "image/jpeg",
-      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      "Cache-Control": isThumb
+        ? "public, max-age=604800, stale-while-revalidate=2592000, immutable"
+        : "public, max-age=172800, stale-while-revalidate=604800, immutable",
+      "Vary": "Accept"
     }
   });
 }
@@ -44,14 +47,18 @@ async function fetchImageUrl(image) {
   }).catch(() => null);
 }
 
-export async function GET(_request, { params }) {
+export async function GET(request, { params }) {
   const { id } = await params;
+  const url = new URL(request.url);
+  const size = url.searchParams.get("size");
+  const isThumb = size === "thumb";
+
   const product = await getProduct(Number(id), { withImage: true });
   const image = String(product?.image || "").trim();
   if (!image) return new Response("Image not found", { status: 404 });
 
   const dataUrl = parseImageDataUrl(image);
-  if (dataUrl) return imageResponse(dataUrl.buffer, dataUrl.mime);
+  if (dataUrl) return imageResponse(dataUrl.buffer, dataUrl.mime, isThumb);
 
   if (!image.startsWith("http://") && !image.startsWith("https://")) {
     return new Response("Unsupported image", { status: 400 });
@@ -62,5 +69,6 @@ export async function GET(_request, { params }) {
     return new Response("Image not available", { status: response?.status || 404 });
   }
 
-  return imageResponse(response.body, response.headers.get("content-type"));
+  return imageResponse(response.body, response.headers.get("content-type"), isThumb);
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   BadgePercent,
   Clock3,
@@ -32,6 +32,16 @@ const PRODUCT_BATCH_SIZE = 48;
 const EMPTY_PRODUCTS = [];
 const PRODUCTS_CACHE_KEY = "hyperProductsCache:v4";
 
+// Sort categories: تورت always last
+const CATEGORY_SORT_KEY = "تورت";
+function sortCategories(categories) {
+  return [...categories].sort((a, b) => {
+    if (a === CATEGORY_SORT_KEY) return 1;
+    if (b === CATEGORY_SORT_KEY) return -1;
+    return 0;
+  });
+}
+
 function mergeProductImages(previousProducts, nextProducts) {
   const previousImages = new Map(
     previousProducts
@@ -56,9 +66,14 @@ function Logo() {
   );
 }
 
-function ProductImage({ product }) {
+// IntersectionObserver-based lazy image loader
+function LazyProductImage({ product }) {
+  const containerRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
+
   const image = String(product.image || "").trim();
   const imageVersion = encodeURIComponent(image.slice(-36));
   const proxySrc = `/api/product-image/${product.id}?v=${imageVersion}`;
@@ -71,31 +86,53 @@ function ProductImage({ product }) {
   useEffect(() => {
     setFailed(false);
     setUseProxy(false);
+    setLoaded(false);
   }, [image]);
 
-  if (!failed) {
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px 0px", threshold: 0.01 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  if (failed) {
     return (
-      <img
-        src={imageSrc}
-        alt={product.name}
-        loading="lazy"
-        decoding="async"
-        referrerPolicy="no-referrer"
-        onError={() => {
-          if (image && !image.startsWith("data:image/") && !useProxy) {
-            setUseProxy(true);
-            return;
-          }
-          setFailed(true);
-        }}
-      />
+      <div ref={containerRef} className="placeholder-dessert" aria-hidden="true">
+        <span />
+        <b>{product.category.includes("مخبوزات") ? "مخبوزات" : "حلويات"}</b>
+      </div>
     );
   }
 
   return (
-    <div className="placeholder-dessert" aria-hidden="true">
-      <span />
-      <b>{product.category.includes("مخبوزات") ? "مخبوزات" : "حلويات"}</b>
+    <div ref={containerRef} className={`lazy-image-wrap ${loaded ? "loaded" : ""}`}>
+      {isVisible && (
+        <img
+          src={imageSrc}
+          alt={product.name}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onLoad={() => setLoaded(true)}
+          onError={() => {
+            if (image && !image.startsWith("data:image/") && !useProxy) {
+              setUseProxy(true);
+              return;
+            }
+            setFailed(true);
+          }}
+        />
+      )}
+      {!loaded && !failed && <div className="img-placeholder-shimmer" />}
     </div>
   );
 }
@@ -207,7 +244,8 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   }, [cart, form]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(products.map((product) => product.category)));
+    const raw = Array.from(new Set(products.map((product) => product.category)));
+    return sortCategories(raw);
   }, [products]);
 
   const visibleProducts = useMemo(() => {
@@ -255,6 +293,18 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   }
 
   function addToCart(product, customPrice) {
+    // Check stock before adding
+    if (product.stock !== null && product.stock !== undefined) {
+      const currentInCart = cart
+        .filter((item) => item.id === product.id)
+        .reduce((sum, item) => sum + item.quantity, 0);
+      if (currentInCart >= Number(product.stock)) {
+        setToast({ id: Date.now(), productName: `${product.name} - الكمية المتاحة خلصت!`, isError: true });
+        window.setTimeout(() => setToast(null), 2300);
+        return;
+      }
+    }
+
     const price = Number(customPrice || product.price);
     setCart((current) => {
       const found = current.find((item) => item.id === product.id && item.price === price);
@@ -471,7 +521,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           Array.from({ length: 8 }).map((_, index) => <div className="product-skeleton" key={index} />)}
         {!productsLoading && productsError && <p className="empty catalog-empty">{productsError}</p>}
         {!productsLoading && !productsError && displayedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} onAdd={addToCart} />
+          <ProductCard key={product.id} product={product} onAdd={addToCart} cart={cart} />
         ))}
         {!productsLoading && !productsError && visibleProducts.length === 0 && (
           <p className="empty catalog-empty">مفيش منتجات مطابقة للبحث.</p>
@@ -514,12 +564,12 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       </button>
 
       {toast && (
-        <div className="add-toast" role="status" aria-live="polite">
+        <div className={`add-toast ${toast.isError ? "toast-error" : ""}`} role="status" aria-live="polite">
           <div>
-            <strong>تمت الإضافة للسلة</strong>
+            <strong>{toast.isError ? "تنبيه" : "تمت الإضافة للسلة"}</strong>
             <span>{toast.productName}</span>
           </div>
-          <button onClick={() => setCartOpen(true)}>إكمال الطلب</button>
+          {!toast.isError && <button onClick={() => setCartOpen(true)}>إكمال الطلب</button>}
         </div>
       )}
 
@@ -619,16 +669,28 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   );
 }
 
-function ProductCard({ product, onAdd }) {
+function ProductCard({ product, onAdd, cart }) {
   const [customPrice, setCustomPrice] = useState(product.price);
   const soldOut = !product.available;
+  const hasLimitedStock = product.stock !== null && product.stock !== undefined;
+  const stockLeft = hasLimitedStock ? Number(product.stock) : null;
+  const cartQty = cart
+    .filter((item) => item.id === product.id)
+    .reduce((sum, item) => sum + item.quantity, 0);
+  const stockExhausted = hasLimitedStock && stockLeft <= 0;
+  const isDisabled = soldOut || stockExhausted;
 
   return (
     <article className="product-card">
       <div className="image-wrap">
-        <ProductImage product={product} />
+        <LazyProductImage product={product} />
         {Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price) && (
           <span className="offer-ribbon">عرض</span>
+        )}
+        {hasLimitedStock && !soldOut && (
+          <span className={`stock-badge ${stockLeft <= 3 ? "stock-low" : ""}`}>
+            {stockLeft <= 0 ? "نفذ" : `متبقي ${stockLeft}`}
+          </span>
         )}
         {soldOut && <div className="soldout">Sold<br />Out</div>}
       </div>
@@ -651,8 +713,8 @@ function ProductCard({ product, onAdd }) {
           />
         </label>
       )}
-      <button disabled={soldOut} onClick={() => onAdd(product, customPrice)}>
-        {soldOut ? "Sold Out ×" : "إضافة للسلة"}
+      <button disabled={isDisabled} onClick={() => onAdd(product, customPrice)}>
+        {soldOut ? "Sold Out ×" : stockExhausted ? "نفذ المخزون" : "إضافة للسلة"}
       </button>
     </article>
   );
