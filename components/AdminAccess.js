@@ -29,7 +29,8 @@ const blankProduct = {
   available: true,
   stock: "",
   stockMode: "unlimited",
-  image: ""
+  image: "",
+  removeImage: false
 };
 
 const ADMIN_PRODUCT_BATCH_SIZE = 80;
@@ -144,7 +145,7 @@ function AdminProductThumb({ product }) {
   return visible ? (
     <img
       ref={ref}
-      src={`/api/product-image/${product.id}?size=thumb`}
+      src={`/api/product-image/${product.id}?size=thumb&v=${encodeURIComponent(product.updatedAt || "")}`}
       alt={product.name}
       loading="lazy"
       decoding="async"
@@ -340,10 +341,12 @@ function AdminDashboard({ onLogout }) {
     try {
       const editing = Boolean(productForm.id);
       const stockValue = productForm.stockMode === "limited" ? (productForm.stock === "" ? 0 : Number(productForm.stock)) : null;
+      const image = productForm.removeImage ? "" : await uploadProductImageIfNeeded(productForm.image);
       const payload = {
         ...productForm,
         stock: stockValue,
-        image: await uploadProductImageIfNeeded(productForm.image)
+        image,
+        removeImage: Boolean(productForm.removeImage)
       };
       delete payload.stockMode;
       const response = await fetch("/api/admin/products", {
@@ -413,6 +416,8 @@ function AdminDashboard({ onLogout }) {
   function editProduct(product) {
     setProductForm({
       ...product,
+      image: product.image || "",
+      removeImage: false,
       originalPrice: product.originalPrice || "",
       offerActive: Boolean(product.offerActive),
       variablePrice: Boolean(product.variablePrice),
@@ -495,7 +500,7 @@ function AdminDashboard({ onLogout }) {
     const file = event.target.files?.[0];
     if (!file) return;
     const dataUrl = await resizeImage(file).catch(() => fileToDataUrl(file));
-    setProductForm((current) => ({ ...current, image: dataUrl }));
+    setProductForm((current) => ({ ...current, image: dataUrl, removeImage: false }));
   }
 
   async function updateOrder(order, updates) {
@@ -717,10 +722,16 @@ function AdminDashboard({ onLogout }) {
               رفع صورة المنتج
               <input type="file" accept="image/*" onChange={handleProductImage} />
             </label>
-            {productForm.image && (
+            {(productForm.image || (productForm.id && !productForm.removeImage)) && (
               <div className="image-preview-wrap">
-                <img className="admin-preview" src={productForm.image.startsWith("data:") ? productForm.image : `/api/product-image/${productForm.id}?v=${Date.now()}`} alt="معاينة المنتج" />
-                <button type="button" className="remove-image-btn" onClick={() => setProductForm({ ...productForm, image: "" })}>
+                <img
+                  className="admin-preview"
+                  src={productForm.image?.startsWith("data:")
+                    ? productForm.image
+                    : `/api/product-image/${productForm.id}?v=${encodeURIComponent(productForm.updatedAt || productForm.image || "")}`}
+                  alt="معاينة المنتج"
+                />
+                <button type="button" className="remove-image-btn" onClick={() => setProductForm({ ...productForm, image: "", removeImage: true })}>
                   <Trash2 size={14} />
                   إزالة الصورة
                 </button>

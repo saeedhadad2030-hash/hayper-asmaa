@@ -14,6 +14,7 @@ export async function GET() {
 export async function POST(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
+  const updatedAt = new Date().toISOString();
   const product = {
     name: String(body.name || "").trim(),
     category: String(body.category || "حلويات شريف الزيني").trim(),
@@ -23,7 +24,8 @@ export async function POST(request) {
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available === false ? 0 : 1,
     stock: body.stock === null || body.stock === undefined || body.stock === "" ? null : Number(body.stock),
-    image: body.image || null
+    image: body.image || null,
+    updatedAt
   };
   await ensureCategory(product.category);
   const id = await createProduct(product);
@@ -34,6 +36,7 @@ export async function PUT(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
   const existing = await getProduct(Number(body.id), { withImage: true });
+  const updatedAt = new Date().toISOString();
   const product = {
     id: Number(body.id),
     name: String(body.name || "").trim(),
@@ -44,7 +47,8 @@ export async function PUT(request) {
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available ? 1 : 0,
     stock: body.stock === null || body.stock === undefined || body.stock === "" ? null : Number(body.stock),
-    image: body.image ? body.image : existing?.image ?? null
+    image: body.removeImage ? null : body.image ? body.image : existing?.image ?? null,
+    updatedAt
   };
   await ensureCategory(product.category);
   await updateProduct(product);

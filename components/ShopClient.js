@@ -75,7 +75,7 @@ function LazyProductImage({ product }) {
   const [useProxy, setUseProxy] = useState(false);
 
   const image = String(product.image || "").trim();
-  const imageVersion = encodeURIComponent(image.slice(-36));
+  const imageVersion = encodeURIComponent(product.updatedAt || image.slice(-36));
   const proxySrc = `/api/product-image/${product.id}?v=${imageVersion}`;
   const imageSrc = image
     ? image.startsWith("data:image/") || !useProxy
@@ -87,7 +87,7 @@ function LazyProductImage({ product }) {
     setFailed(false);
     setUseProxy(false);
     setLoaded(false);
-  }, [image]);
+  }, [image, product.updatedAt]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -407,7 +407,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     ]
       .filter(Boolean)
       .join("\n");
-    window.open(`https://wa.me/201031367037?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/201550181908?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
     setMessage(`تم تسجيل الطلب رقم ${data.order.id}. الإدارة هتراجعه وتأكد الحجز.`);
     setCart([]);
     setForm({
