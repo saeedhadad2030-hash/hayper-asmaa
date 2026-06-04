@@ -354,9 +354,23 @@ function AdminDashboard({ onLogout }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const data = await response.json();
+      let data = await response.json();
       if (!response.ok) throw new Error(data.error || "تعذر حفظ المنتج");
-      const savedProduct = normalizeProductForState(data.product);
+      if (editing && productForm.removeImage) {
+        const removeResponse = await fetch("/api/admin/products", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "removeImage", id: productForm.id })
+        });
+        const removeData = await removeResponse.json();
+        if (!removeResponse.ok) throw new Error(removeData.error || "تعذر إزالة صورة المنتج");
+        data = removeData;
+      }
+      const savedProduct = normalizeProductForState({
+        ...data.product,
+        image: productForm.removeImage ? "" : data.product.image,
+        removeImage: false
+      });
       updateProductsState((current) =>
         editing
           ? current.map((product) => (product.id === savedProduct.id ? savedProduct : product))

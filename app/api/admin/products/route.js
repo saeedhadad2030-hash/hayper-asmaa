@@ -83,6 +83,18 @@ function sameProductData(first, second) {
 export async function PATCH(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
+  if (body.action === "removeImage") {
+    const existing = await getProduct(Number(body.id), { withImage: true });
+    if (!existing) return Response.json({ error: "المنتج غير موجود" }, { status: 404 });
+    const product = {
+      ...existing,
+      image: null,
+      updatedAt: new Date().toISOString()
+    };
+    await updateProduct(product);
+    return Response.json({ ok: true, product });
+  }
+
   if (body.action === "migrateImages") {
     const limit = Math.min(Math.max(Number(body.limit) || 8, 1), 12);
     const products = await listProducts({ admin: true, withImages: true });
