@@ -183,7 +183,7 @@ button:disabled {
   border-radius: 999px;
   padding: 10px 12px;
   min-height: 42px;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition: all 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tabbar button:hover {
@@ -191,10 +191,15 @@ button:disabled {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.tabbar button:active {
+  transform: scale(0.95);
+}
+
 .tabbar button.active {
-  color: var(--gold);
-  border-color: rgba(216, 154, 38, 0.7);
-  box-shadow: inset 0 -3px 0 var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(216, 154, 38, 0.28), rgba(216, 154, 38, 0.12));
+  box-shadow: 0 0 18px rgba(216, 154, 38, 0.25), inset 0 -2px 0 var(--gold);
 }
 
 .intro-band,
@@ -387,13 +392,19 @@ footer {
   background: #fff;
   font-weight: 700;
   box-shadow: 0 6px 16px rgba(22, 44, 22, 0.05);
+  transition: all 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-row button:active {
+  transform: scale(0.93);
 }
 
 .category-row button.active {
   background: linear-gradient(135deg, var(--green), var(--green-2));
   color: #fff;
   border-color: var(--green);
-  box-shadow: 0 10px 22px rgba(35, 109, 55, 0.18);
+  box-shadow: 0 10px 22px rgba(35, 109, 55, 0.22), 0 0 0 3px rgba(35, 109, 55, 0.12);
+  transform: scale(1.04);
 }
 
 .catalog-meta {
@@ -462,18 +473,28 @@ footer {
   overflow: hidden;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 11px;
-  box-shadow: 0 16px 34px rgba(22, 44, 22, 0.1);
+  box-shadow: 0 8px 24px rgba(22, 44, 22, 0.08);
   min-width: 0;
-  animation: cardIn 360ms ease both;
-  transition: transform 190ms ease, box-shadow 190ms ease, border-color 190ms ease;
+  animation: cardIn 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 280ms ease, border-color 280ms ease;
 }
 
+/* Staggered card entrance */
+.product-card:nth-child(2n) { animation-delay: 60ms; }
+.product-card:nth-child(3n) { animation-delay: 120ms; }
+.product-card:nth-child(4n) { animation-delay: 180ms; }
+
 .product-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-6px) scale(1.01);
   border-color: rgba(216, 154, 38, 0.48);
-  box-shadow: 0 18px 38px rgba(22, 44, 22, 0.14);
+  box-shadow: 0 20px 42px rgba(22, 44, 22, 0.14);
+}
+
+.product-card:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
 }
 
 .image-wrap {
@@ -490,6 +511,11 @@ footer {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-card:hover .image-wrap img {
+  transform: scale(1.06);
 }
 
 .placeholder-dessert {
@@ -608,6 +634,7 @@ footer {
   background: linear-gradient(135deg, #ffd36d, #d89a26);
   font-weight: 900;
   box-shadow: 0 8px 18px rgba(67, 42, 10, 0.22);
+  animation: ribbonPulse 2.4s ease-in-out infinite;
 }
 
 .stock-badge {
@@ -638,14 +665,37 @@ footer {
   color: #fff;
   background: linear-gradient(135deg, var(--green), var(--green-2));
   font-weight: 900;
-  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  position: relative;
+  overflow: hidden;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), filter 200ms ease, box-shadow 200ms ease;
+}
+
+.product-card button::after,
+.primary-action::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.15) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 500ms ease;
+}
+
+.product-card button:hover::after,
+.primary-action:hover::after {
+  transform: translateX(100%);
 }
 
 .product-card button:hover:not(:disabled),
 .primary-action:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.05);
-  box-shadow: 0 10px 20px rgba(35, 109, 55, 0.2);
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 10px 24px rgba(35, 109, 55, 0.25);
+}
+
+.product-card button:active:not(:disabled),
+.primary-action:active:not(:disabled) {
+  transform: scale(0.96);
+  transition-duration: 80ms;
 }
 
 .product-card button:disabled {
@@ -735,9 +785,14 @@ footer a {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  background: var(--green);
-  box-shadow: var(--shadow);
+  background: linear-gradient(135deg, var(--green), #1a5e30);
+  box-shadow: 0 8px 28px rgba(35, 109, 55, 0.35), 0 0 0 0 rgba(35, 109, 55, 0.3);
   animation: floatPulse 3.2s ease-in-out infinite;
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms ease;
+}
+
+.floating-cart:active {
+  transform: scale(0.9);
 }
 
 .floating-cart.bump {
@@ -856,10 +911,11 @@ footer a {
   max-height: 100vh;
   overflow-y: auto;
   background: var(--paper);
-  border-radius: 16px 16px 0 0;
+  border-radius: 20px 20px 0 0;
   padding: 18px;
-  box-shadow: -12px 0 36px rgba(0, 0, 0, 0.22);
-  animation: drawerUp 220ms ease both;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25);
+  animation: drawerUp 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  backdrop-filter: blur(12px);
 }
 
 .drawer-head,
@@ -1620,23 +1676,24 @@ footer a {
 }
 
 @keyframes logoFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-5px) rotate(1deg); }
+  75% { transform: translateY(-3px) rotate(-1deg); }
 }
 
 @keyframes floatPulse {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  0%, 100% { transform: translateY(0); box-shadow: 0 8px 28px rgba(35, 109, 55, 0.35); }
+  50% { transform: translateY(-6px); box-shadow: 0 14px 36px rgba(35, 109, 55, 0.45); }
 }
 
 @keyframes cardIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(20px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1647,19 +1704,19 @@ footer a {
 }
 
 @keyframes drawerUp {
-  from { transform: translateY(24px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 @keyframes modalIn {
-  from { transform: scale(.985); opacity: 0; }
+  from { transform: scale(.96); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translate(-50%, 18px) scale(.98);
+    transform: translate(-50%, 24px) scale(.94);
   }
   to {
     opacity: 1;
@@ -1669,8 +1726,9 @@ footer a {
 
 @keyframes cartBump {
   0% { transform: scale(1); }
-  32% { transform: scale(1.14) rotate(-5deg); }
-  64% { transform: scale(.96) rotate(4deg); }
+  20% { transform: scale(1.18) rotate(-8deg); }
+  40% { transform: scale(0.92) rotate(6deg); }
+  60% { transform: scale(1.06) rotate(-3deg); }
   100% { transform: scale(1); }
 }
 
@@ -1681,8 +1739,13 @@ footer a {
 }
 
 @keyframes stockPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.04); }
+}
+
+@keyframes ribbonPulse {
+  0%, 100% { box-shadow: 0 8px 18px rgba(67, 42, 10, 0.22); }
+  50% { box-shadow: 0 6px 24px rgba(216, 154, 38, 0.5), 0 0 12px rgba(216, 154, 38, 0.3); }
 }
 
 /* Category management */
