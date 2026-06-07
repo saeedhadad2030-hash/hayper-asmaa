@@ -37,6 +37,20 @@ export async function PUT(request) {
   const body = await request.json();
   const existing = await getProduct(Number(body.id), { withImage: true });
   const updatedAt = new Date().toISOString();
+
+  // Image logic:
+  // 1. removeImage=true → clear image
+  // 2. body.image is a new value (data URL or URL) → use it
+  // 3. body.image is empty/null and no removeImage → keep existing
+  let image;
+  if (body.removeImage) {
+    image = null;
+  } else if (body.image && String(body.image).trim()) {
+    image = body.image;
+  } else {
+    image = existing?.image ?? null;
+  }
+
   const product = {
     id: Number(body.id),
     name: String(body.name || "").trim(),
@@ -47,7 +61,7 @@ export async function PUT(request) {
     variablePrice: body.variablePrice ? 1 : 0,
     available: body.available ? 1 : 0,
     stock: body.stock === null || body.stock === undefined || body.stock === "" ? null : Number(body.stock),
-    image: body.removeImage ? null : body.image ? body.image : existing?.image ?? null,
+    image,
     updatedAt
   };
   await ensureCategory(product.category);

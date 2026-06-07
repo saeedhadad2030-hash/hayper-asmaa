@@ -341,12 +341,20 @@ function AdminDashboard({ onLogout }) {
     try {
       const editing = Boolean(productForm.id);
       const stockValue = productForm.stockMode === "limited" ? (productForm.stock === "" ? 0 : Number(productForm.stock)) : null;
-      const image = productForm.removeImage ? "" : await uploadProductImageIfNeeded(productForm.image);
+      const isRemoving = Boolean(productForm.removeImage);
+      let image;
+      if (isRemoving) {
+        image = null;
+      } else if (productForm.image) {
+        image = await uploadProductImageIfNeeded(productForm.image);
+      } else {
+        image = "";
+      }
       const payload = {
         ...productForm,
         stock: stockValue,
         image,
-        removeImage: Boolean(productForm.removeImage)
+        removeImage: isRemoving
       };
       delete payload.stockMode;
       const response = await fetch("/api/admin/products", {
@@ -354,21 +362,10 @@ function AdminDashboard({ onLogout }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      let data = await response.json();
+      const data = await response.json();
       if (!response.ok) throw new Error(data.error || "تعذر حفظ المنتج");
-      if (editing && productForm.removeImage) {
-        const removeResponse = await fetch("/api/admin/products", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "removeImage", id: productForm.id })
-        });
-        const removeData = await removeResponse.json();
-        if (!removeResponse.ok) throw new Error(removeData.error || "تعذر إزالة صورة المنتج");
-        data = removeData;
-      }
       const savedProduct = normalizeProductForState({
         ...data.product,
-        image: productForm.removeImage ? "" : data.product.image,
         removeImage: false
       });
       updateProductsState((current) =>
@@ -378,7 +375,6 @@ function AdminDashboard({ onLogout }) {
       );
       clearShopProductsCache();
       setProductForm(blankProduct);
-      // Refresh categories in case a new one was created
       refreshCategories();
     } catch (err) {
       setProductActionError(err.message || "تعذر حفظ المنتج");

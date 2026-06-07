@@ -32,12 +32,12 @@ const PRODUCT_BATCH_SIZE = 48;
 const EMPTY_PRODUCTS = [];
 const PRODUCTS_CACHE_KEY = "hyperProductsCache:v4";
 
-// Sort categories: تورت always last
-const CATEGORY_SORT_KEY = "تورت";
-function sortCategories(categories) {
-  return [...categories].sort((a, b) => {
-    if (a === CATEGORY_SORT_KEY) return 1;
-    if (b === CATEGORY_SORT_KEY) return -1;
+// Sort categories using sortOrder from DB, fallback: تورت always last
+function sortCategories(categoryNames, categoryOrderMap) {
+  return [...categoryNames].sort((a, b) => {
+    const orderA = categoryOrderMap.get(a) ?? 50;
+    const orderB = categoryOrderMap.get(b) ?? 50;
+    if (orderA !== orderB) return orderA - orderB;
     return 0;
   });
 }
@@ -137,8 +137,24 @@ function LazyProductImage({ product }) {
   );
 }
 
-export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialProductsError = "" }) {
+export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialProductsError = "", initialCategories = [] }) {
   const [products, setProducts] = useState(initialProducts);
+
+  // Build category sort order map from DB categories
+  const categorySortMap = useMemo(() => {
+    const map = new Map();
+    if (initialCategories.length > 0) {
+      initialCategories.forEach(cat => map.set(cat.name, cat.sortOrder ?? 50));
+    }
+    // Fallback if no categories from DB
+    if (map.size === 0) {
+      map.set("حلويات شريف الزيني", 1);
+      map.set("مخبوزات", 2);
+      map.set("مشكل حلويات", 3);
+      map.set("تورت", 99);
+    }
+    return map;
+  }, [initialCategories]);
   const [productsLoading, setProductsLoading] = useState(initialProducts.length === 0 && !initialProductsError);
   const [productsError, setProductsError] = useState(initialProductsError);
   const [visibleLimit, setVisibleLimit] = useState(PRODUCT_BATCH_SIZE);
@@ -245,8 +261,8 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
 
   const categories = useMemo(() => {
     const raw = Array.from(new Set(products.map((product) => product.category)));
-    return sortCategories(raw);
-  }, [products]);
+    return sortCategories(raw, categorySortMap);
+  }, [products, categorySortMap]);
 
   // Build a category order map for sorting products
   const categoryOrder = useMemo(() => {
