@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:debug": "cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -16,6 +20,9 @@
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
     "@netlify/plugin-nextjs": "^5.15.11"
   }
 }

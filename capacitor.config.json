@@ -1,0 +1,12 @@
+{
+  "appId": "com.hayperasmaa.app",
+  "appName": "هايبر أسماء",
+  "webDir": ".next",
+  "server": {
+    "url": "https://hayper-asmaa.netlify.app",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#151914"
+  }
+}
