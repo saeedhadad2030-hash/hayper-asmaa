@@ -595,11 +595,18 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
 
       {toast && (
         <div className={`add-toast ${toast.isError ? "toast-error" : ""}`} role="status" aria-live="polite">
-          <div>
-            <strong>{toast.isError ? "تنبيه" : "تمت الإضافة للسلة"}</strong>
+          <div className="toast-icon-wrap">
+            {toast.isError ? <Info size={22} /> : <Sparkles size={22} />}
+          </div>
+          <div className="toast-content">
+            <strong>{toast.isError ? "تنبيه" : "✓ تمت الإضافة للسلة"}</strong>
             <span>{toast.productName}</span>
           </div>
-          {!toast.isError && <button onClick={() => setCartOpen(true)}>إكمال الطلب</button>}
+          {!toast.isError && (
+            <button onClick={() => setCartOpen(true)} className="toast-action-btn">
+              إكمال الطلب 🛒
+            </button>
+          )}
         </div>
       )}
 
@@ -701,6 +708,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
 
 function ProductCard({ product, onAdd, cart }) {
   const [customPrice, setCustomPrice] = useState(product.price);
+  const [addedEffect, setAddedEffect] = useState(false);
   const soldOut = !product.available;
   const hasLimitedStock = product.stock !== null && product.stock !== undefined;
   const stockLeft = hasLimitedStock ? Number(product.stock) : null;
@@ -709,6 +717,13 @@ function ProductCard({ product, onAdd, cart }) {
     .reduce((sum, item) => sum + item.quantity, 0);
   const stockExhausted = hasLimitedStock && stockLeft <= 0;
   const isDisabled = soldOut || stockExhausted;
+
+  function handleAdd() {
+    if (isDisabled) return;
+    onAdd(product, customPrice);
+    setAddedEffect(true);
+    window.setTimeout(() => setAddedEffect(false), 900);
+  }
 
   return (
     <article className="product-card">
@@ -743,8 +758,20 @@ function ProductCard({ product, onAdd, cart }) {
           />
         </label>
       )}
-      <button disabled={isDisabled} onClick={() => onAdd(product, customPrice)}>
-        {soldOut ? "Sold Out ×" : stockExhausted ? "نفذ المخزون" : "إضافة للسلة"}
+      <button disabled={isDisabled} onClick={handleAdd} className={addedEffect ? "btn-success" : ""}>
+        {soldOut ? (
+          "Sold Out ×"
+        ) : stockExhausted ? (
+          "نفذ المخزون"
+        ) : addedEffect ? (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifySelf: "center" }}>
+            ✓ تمت الإضافة
+          </span>
+        ) : (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifySelf: "center" }}>
+            <Plus size={18} /> إضافة للسلة
+          </span>
+        )}
       </button>
     </article>
   );
