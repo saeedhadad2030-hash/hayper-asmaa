@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "pages:build": "npx @opennextjs/cloudflare",
+    "pages:build": "opennextjs-cloudflare build",
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
@@ -24,8 +24,7 @@
     "@capacitor/android": "^8.4.0",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
-    "@cloudflare/next-on-pages": "^1.13.7",
-    "@opennextjs/cloudflare": "0.3.10",
+    "@opennextjs/cloudflare": "^1.20.1",
     "wrangler": "^3.111.0"
   }
 }
