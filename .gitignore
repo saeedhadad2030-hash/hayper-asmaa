@@ -3,4 +3,4 @@ node_modules
 .npm-cache
 data/*.sqlite
 data/*.sqlite-*
-.env*.local
+.env*

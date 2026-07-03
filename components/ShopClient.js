@@ -423,7 +423,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     ]
       .filter(Boolean)
       .join("\n");
-    window.open(`https://wa.me/201550181908?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_ORDER_NUMBER || "201550181908"}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
     setMessage(`تم تسجيل الطلب رقم ${data.order.id}. الإدارة هتراجعه وتأكد الحجز.`);
     setCart([]);
     setForm({
@@ -439,7 +439,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   return (
     <main className="shop-shell">
       <header className="topbar">
-        <a className="whatsapp-link" href="https://wa.me/201031367037" target="_blank" aria-label="واتساب">
+        <a className="whatsapp-link" href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_CONTACT_NUMBER || "201031367037"}`} target="_blank" aria-label="واتساب">
           <MessageCircle size={23} />
         </a>
         <button className="brand-button" onClick={revealAdmin} aria-label="هايبر أسماء">
