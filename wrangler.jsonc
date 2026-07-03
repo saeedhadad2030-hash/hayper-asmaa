@@ -10,5 +10,10 @@
   },
   "images": {
     "binding": "IMAGES"
+  },
+  "vars": {
+    "SUPABASE_URL": "https://xbzlnrczigldogdyfadu.supabase.co",
+    "NEXT_PUBLIC_WHATSAPP_CONTACT_NUMBER": "201550181908",
+    "NEXT_PUBLIC_WHATSAPP_ORDER_NUMBER": "201550181908"
   }
 }
