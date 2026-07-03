@@ -4,9 +4,23 @@ import { countProductsWithImages, getSupabaseBaseUrl, hasSupabase, listProducts 
 export const runtime = "nodejs";
 
 export async function GET() {
+  let cfEnvKeys = [];
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const cf = getCloudflareContext({ async: false });
+    if (cf?.env) cfEnvKeys = Object.keys(cf.env);
+  } catch (e) {
+    // ignore if not in cloudflare context
+  }
+
   const result = {
     ok: true,
     hasSupabase: hasSupabase(),
+    envSupabaseUrl: Boolean(process.env.SUPABASE_URL),
+    envServiceKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    envPassword: Boolean(process.env.ADMIN_PASSWORD),
+    processEnvKeys: Object.keys(process.env).filter(k => k.includes("SUPA") || k.includes("ADMIN") || k.includes("WHATSAPP")),
+    cfEnvKeys: cfEnvKeys.filter(k => k.includes("SUPA") || k.includes("ADMIN") || k.includes("WHATSAPP")),
     supabaseHost: null,
     productsCount: null,
     productsWithImages: null,
