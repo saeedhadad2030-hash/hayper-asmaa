@@ -23,17 +23,134 @@
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at 15% 10%, rgba(21, 128, 61, 0.1) 0%, transparent 40%),
-    radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(20, 83, 45, 0.07) 0%, transparent 50%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #fffef9 0%, #f8f5eb 50%, #f2ede0 100%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: 'Alexandria', 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+/* Animated Global Background (Market & Sweets Theme) */
+.animated-bg-wrapper {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 85% 25%, rgba(245, 158, 11, 0.09) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(5, 150, 105, 0.06) 0%, transparent 55%),
+    linear-gradient(135deg, #fffdf8 0%, #f9f6ee 50%, #f3efe5 100%);
+}
+
+.bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(75px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+.blob-emerald {
+  top: -10%;
+  left: -5%;
+  width: clamp(320px, 45vw, 650px);
+  height: clamp(320px, 45vw, 650px);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(4, 120, 87, 0.1) 60%, transparent 80%);
+  animation: blobFloat1 22s ease-in-out infinite alternate;
+}
+
+.blob-golden {
+  top: 35%;
+  right: -10%;
+  width: clamp(350px, 50vw, 700px);
+  height: clamp(350px, 50vw, 700px);
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.38) 0%, rgba(217, 119, 6, 0.1) 60%, transparent 80%);
+  animation: blobFloat2 26s ease-in-out infinite alternate;
+}
+
+.blob-sweet {
+  bottom: -15%;
+  left: 20%;
+  width: clamp(300px, 42vw, 600px);
+  height: clamp(300px, 42vw, 600px);
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.28) 0%, rgba(16, 185, 129, 0.15) 60%, transparent 80%);
+  animation: blobFloat3 24s ease-in-out infinite alternate;
+}
+
+.bg-items-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.bg-floating-item {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  opacity: 0.22;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.08));
+  will-change: transform;
+}
+
+@media (max-width: 768px) {
+  .bg-floating-item {
+    opacity: 0.16;
+    transform: scale(0.85);
+  }
+  .bg-blob {
+    filter: blur(55px);
+    opacity: 0.45;
+  }
+}
+
+@keyframes blobFloat1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(8vw, 12vh) scale(1.12); }
+  100% { transform: translate(-4vw, 20vh) scale(0.95); }
+}
+
+@keyframes blobFloat2 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-10vw, -10vh) scale(1.08); }
+  100% { transform: translate(-5vw, 15vh) scale(1.15); }
+}
+
+@keyframes blobFloat3 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(12vw, -15vh) scale(1.1); }
+  100% { transform: translate(-8vw, -8vh) scale(0.92); }
+}
+
+@keyframes floatSweet {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translateY(-22px) rotate(10deg) scale(1.06);
+  }
+  66% {
+    transform: translateY(-10px) rotate(-8deg) scale(0.96);
+  }
+}
+
+@keyframes floatMarket {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translateY(20px) rotate(-12deg) scale(1.05);
+  }
+  66% {
+    transform: translateY(-14px) rotate(8deg) scale(0.97);
+  }
 }
 
 html {

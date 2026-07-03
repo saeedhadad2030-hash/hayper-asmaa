@@ -1,5 +1,6 @@
 import "./globals.css";
 import PwaRegistration from "@/components/PwaRegistration";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 export const metadata = {
   title: "هايبر أسماء",
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl">
       <body>
+        <AnimatedBackground />
         <PwaRegistration />
         {children}
       </body>
