@@ -1,5 +1,3 @@
-// default open-next.config.ts file created by @opennextjs/cloudflare
-
 import cache from "@opennextjs/cloudflare/kvCache";
 
 const config = {
