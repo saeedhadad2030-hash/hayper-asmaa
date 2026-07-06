@@ -2923,3 +2923,96 @@ footer a {
     width: 0%;
   }
 }
+
+/* Savings Badge (وفرت X ج.م) styling */
+.savings-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #eefaf2, #d1fae5);
+  color: var(--green-2);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.08);
+  animation: savingsPulse 2.8s infinite ease-in-out;
+  white-space: nowrap;
+}
+
+@keyframes savingsPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.08);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 6px 14px rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.45);
+  }
+}
+
+/* Quick Quantity Stepper inside Product Card */
+.product-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  background: #f8fafc;
+  border: 2px solid var(--green);
+  border-radius: 12px;
+  padding: 2px 4px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.06);
+  animation: stepperIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.product-stepper .stepper-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.25);
+  transition: all 140ms ease;
+}
+
+.product-stepper .stepper-btn:hover {
+  background: var(--green-2);
+  transform: scale(1.06);
+}
+
+.product-stepper .stepper-btn:active {
+  transform: scale(0.92);
+}
+
+.product-stepper .stepper-val {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--green-2);
+  user-select: none;
+  min-width: 24px;
+  text-align: center;
+  animation: scalePop 180ms ease;
+}
+
+@keyframes stepperIn {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scalePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}

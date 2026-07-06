@@ -66,6 +66,45 @@ function getCategoryIcon(name) {
   return CATEGORY_ICONS[name] || "✨";
 }
 
+function createSweetsExplosion(event) {
+  if (!event || !event.clientX || !event.clientY) return;
+  const emojis = ["🧁", "🍰", "🥐", "🍩", "🍪", "✨"];
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = `${event.clientX}px`;
+  container.style.top = `${event.clientY}px`;
+  container.style.pointerEvents = "none";
+  container.style.zIndex = "9999";
+  document.body.appendChild(container);
+
+  for (let i = 0; i < 6; i++) {
+    const particle = document.createElement("span");
+    particle.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+    particle.style.position = "absolute";
+    particle.style.fontSize = "22px";
+    particle.style.userSelect = "none";
+    particle.style.transition = "transform 800ms cubic-bezier(0.1, 0.8, 0.3, 1), opacity 800ms ease-out";
+    particle.style.transform = "translate(-50%, -50%) scale(0.5)";
+    particle.style.opacity = "1";
+    
+    const angle = (Math.random() * Math.PI * 1.5) - Math.PI * 0.75;
+    const velocity = 40 + Math.random() * 60;
+    const tx = Math.cos(angle) * velocity;
+    const ty = Math.sin(angle) * velocity - 60;
+    
+    container.appendChild(particle);
+    
+    window.requestAnimationFrame(() => {
+      particle.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(1.3) rotate(${Math.random() * 360}deg)`;
+      particle.style.opacity = "0";
+    });
+  }
+
+  window.setTimeout(() => {
+    container.remove();
+  }, 1000);
+}
+
 function Logo() {
   return (
     <div className="brand-mark" aria-label="هايبر أسماء">
@@ -362,7 +401,10 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     }
   }
 
-  function addToCart(product, customPrice, forceOpenCart = false, defaultDeliveryOption = null) {
+  function addToCart(product, customPrice, forceOpenCart = false, defaultDeliveryOption = null, event = null) {
+    if (event) {
+      createSweetsExplosion(event);
+    }
     const price = Number(customPrice || product.price);
     setCart((current) => {
       const found = current.find((item) => item.id === product.id && item.price === price);
@@ -398,7 +440,10 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     }
   }
 
-  function updateQty(index, delta) {
+  function updateQty(index, delta, event = null) {
+    if (event && delta > 0) {
+      createSweetsExplosion(event);
+    }
     setCart((current) =>
       current
         .map((item, itemIndex) =>
@@ -406,6 +451,55 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         )
         .filter((item) => item.quantity > 0)
     );
+  }
+
+  function updateCartQty(productId, delta, event = null) {
+    if (event && delta > 0) {
+      createSweetsExplosion(event);
+    }
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
+    setCart((current) => {
+      const found = current.find((item) => item.id === productId);
+      if (!found) {
+        if (delta <= 0) return current;
+        if (product.stock !== null && product.stock !== undefined && Number(product.stock) <= 0) {
+          setForm((c) => ({ ...c, deliveryOption: "tomorrow" }));
+        }
+        return [
+          ...current,
+          {
+            id: product.id,
+            name: product.name,
+            price: Number(product.price),
+            basePrice: product.price,
+            variablePrice: Boolean(product.variablePrice),
+            quantity: 1
+          }
+        ];
+      }
+
+      const newQty = found.quantity + delta;
+      if (newQty <= 0) {
+        return current.filter((item) => item.id !== productId);
+      }
+
+      if (form.deliveryOption === "today" && product.stock !== null && product.stock !== undefined) {
+        if (newQty > Number(product.stock)) {
+          setToast({ id: Date.now(), productName: `${product.name} - الكمية المتاحة للتوصيل اليوم خلصت!`, isError: true });
+          window.setTimeout(() => setToast(null), 2300);
+          return current;
+        }
+      }
+
+      return current.map((item) =>
+        item.id === productId ? { ...item, quantity: newQty } : item
+      );
+    });
+
+    setCartBump(true);
+    window.setTimeout(() => setCartBump(false), 520);
   }
 
   async function submitOrder(event) {
@@ -616,7 +710,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           Array.from({ length: 8 }).map((_, index) => <div className="product-skeleton" key={index} />)}
         {!productsLoading && productsError && <p className="empty catalog-empty">{productsError}</p>}
         {!productsLoading && !productsError && displayedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} onAdd={addToCart} cart={cart} />
+          <ProductCard key={product.id} product={product} onAdd={addToCart} onUpdateQty={updateCartQty} cart={cart} />
         ))}
         {!productsLoading && !productsError && visibleProducts.length === 0 && (
           <p className="empty catalog-empty">مفيش منتجات مطابقة للبحث.</p>
@@ -732,9 +826,9 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
                       <span>{money(item.price)} × {item.quantity}</span>
                     </div>
                     <div className="qty">
-                      <button onClick={() => updateQty(index, 1)}><Plus size={14} /></button>
-                      <button onClick={() => updateQty(index, -1)}><Minus size={14} /></button>
-                      <button onClick={() => updateQty(index, -item.quantity)}><Trash2 size={14} /></button>
+                      <button onClick={(e) => updateQty(index, 1, e)}><Plus size={14} /></button>
+                      <button onClick={(e) => updateQty(index, -1, e)}><Minus size={14} /></button>
+                      <button onClick={(e) => updateQty(index, -item.quantity, e)}><Trash2 size={14} /></button>
                     </div>
                   </div>
                 ))}
@@ -841,7 +935,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   );
 }
 
-function ProductCard({ product, onAdd, cart }) {
+function ProductCard({ product, onAdd, onUpdateQty, cart }) {
   const [customPrice, setCustomPrice] = useState(product.price);
   const [addedEffect, setAddedEffect] = useState(false);
   const soldOut = !product.available;
@@ -849,9 +943,16 @@ function ProductCard({ product, onAdd, cart }) {
   const stockLeft = hasLimitedStock ? Number(product.stock) : null;
   const isOutOfStockToday = hasLimitedStock && stockLeft <= 0;
 
-  function handleAdd(forceOpenCart = false, defaultDeliveryOption = null) {
+  const hasOffer = Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price);
+  const savings = hasOffer ? Number(product.originalPrice) - Number(product.price) : 0;
+
+  const cartQty = cart
+    .filter((item) => item.id === product.id)
+    .reduce((sum, item) => sum + item.quantity, 0);
+
+  function handleAdd(event, forceOpenCart = false, defaultDeliveryOption = null) {
     if (soldOut) return;
-    onAdd(product, customPrice, forceOpenCart, defaultDeliveryOption);
+    onAdd(product, customPrice, forceOpenCart, defaultDeliveryOption, event);
     setAddedEffect(true);
     window.setTimeout(() => setAddedEffect(false), 900);
   }
@@ -860,7 +961,7 @@ function ProductCard({ product, onAdd, cart }) {
     <article className="product-card">
       <div className="image-wrap">
         <LazyProductImage product={product} />
-        {Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price) && (
+        {hasOffer && (
           <span className="offer-ribbon">عرض</span>
         )}
         {hasLimitedStock && !soldOut && (
@@ -873,10 +974,17 @@ function ProductCard({ product, onAdd, cart }) {
       <h3>{product.name}</h3>
       <p>{product.category}</p>
       <div className="price-stack">
-        {Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price) && (
+        {hasOffer && (
           <span className="old-price">بدل {money(product.originalPrice)}</span>
         )}
-        <strong className="price">{money(product.price)}</strong>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", flexWrap: "wrap" }}>
+          <strong className="price">{money(product.price)}</strong>
+          {hasOffer && savings > 0 && (
+            <span className="savings-badge">
+              وفرت {money(savings)}!
+            </span>
+          )}
+        </div>
       </div>
       {Boolean(product.variablePrice) && (
         <label className="custom-price">
@@ -894,25 +1002,35 @@ function ProductCard({ product, onAdd, cart }) {
         <button disabled className="btn-sold-out">
           غير متاح حالياً ×
         </button>
+      ) : cartQty > 0 ? (
+        <div className="product-stepper">
+          <button onClick={(e) => onUpdateQty(product.id, -1, e)} className="stepper-btn" aria-label="تقليل الكمية">
+            <Minus size={16} />
+          </button>
+          <span className="stepper-val">{cartQty}</span>
+          <button onClick={(e) => onUpdateQty(product.id, 1, e)} className="stepper-btn" aria-label="زيادة الكمية">
+            <Plus size={16} />
+          </button>
+        </div>
       ) : (
         <div className="product-actions">
           {isOutOfStockToday ? (
             <button
-              onClick={() => handleAdd(true, "tomorrow")}
+              onClick={(e) => handleAdd(e, true, "tomorrow")}
               className="btn-order-now preorder-only"
             >
               <Clock3 size={16} /> حجز غداً
             </button>
           ) : (
             <button
-              onClick={() => handleAdd(true, "today")}
+              onClick={(e) => handleAdd(e, true, "today")}
               className="btn-order-now"
             >
               <Zap size={16} /> طلب الآن
             </button>
           )}
           <button
-            onClick={() => handleAdd(false, null)}
+            onClick={(e) => handleAdd(e, false, null)}
             className={`btn-add-to-cart ${addedEffect ? "btn-success" : ""}`}
           >
             {addedEffect ? (
