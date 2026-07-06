@@ -1,4 +1,4 @@
-import { createOrder, getProduct, decrementStock } from "@/lib/store";
+import { createOrder, getProduct, decrementStock, getOrdersByPhone } from "@/lib/store";
 import { calculateDeposit, getDeliveryDate, getPaymentMeta } from "@/lib/shop";
 
 export const runtime = "nodejs";
@@ -99,4 +99,18 @@ export async function POST(request) {
       status
     }
   });
+}
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const phone = searchParams.get("phone");
+  if (!phone) {
+    return Response.json({ error: "برجاء كتابة رقم الهاتف" }, { status: 400 });
+  }
+  try {
+    const orders = await getOrdersByPhone(phone);
+    return Response.json({ orders });
+  } catch (err) {
+    return Response.json({ error: "فشل استرجاع الطلبات" }, { status: 500 });
+  }
 }

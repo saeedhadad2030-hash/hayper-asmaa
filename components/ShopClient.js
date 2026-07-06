@@ -17,7 +17,9 @@ import {
   ShoppingCart,
   Sparkles,
   Trash2,
-  Zap
+  Zap,
+  Heart,
+  ClipboardList
 } from "lucide-react";
 import { calculateDeposit, getDeliveryDate, money, PAYMENT } from "@/lib/shop";
 import AdminAccess from "@/components/AdminAccess";
@@ -26,6 +28,7 @@ const tabs = [
   { id: "about", label: "عن الماركت", icon: Info },
   { id: "sweets", label: "قسم الحلويات", icon: Sparkles },
   { id: "offers", label: "عروض وخصومات", icon: BadgePercent },
+  { id: "wishlist", label: "المفضلة ❤️", icon: Heart },
   { id: "facebook", label: "تابعنا ع الفيس", icon: Share2 }
 ];
 
@@ -216,6 +219,197 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminRevealCount, setAdminRevealCount] = useState(0);
   const [toast, setToast] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const [trackerPhone, setTrackerPhone] = useState("");
+  const [trackedOrders, setTrackedOrders] = useState([]);
+  const [trackerSearching, setTrackerSearching] = useState(false);
+  const [trackerError, setTrackerError] = useState("");
+  const [lastOrder, setLastOrder] = useState(null);
+  const [promoIndex, setPromoIndex] = useState(0);
+
+  const promoSlides = [
+    {
+      title: "🧁 عرض الأسبوع الخاص!",
+      desc: "احجز تورتة السيزون اليوم واحصل على خصم 20% فوري لتسليم الغد 🎂",
+      color: "linear-gradient(135deg, #10b981, #047857)"
+    },
+    {
+      title: "🥐 مخبوزات طازجة يومياً",
+      desc: "كرواسون وباتيه بالزبدة الطبيعية جاهز للحجز والاستلام الفوري 🥖",
+      color: "linear-gradient(135deg, #f59e0b, #d97706)"
+    },
+    {
+      title: "🍬 مشكل حلويات شريف الزيني",
+      desc: "أقوى تشكيلة بسبوسة وكنافة بالسمن البلدي الفاخر لحفلاتكم السعيدة 🍮",
+      color: "linear-gradient(135deg, #ec4899, #be185d)"
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPromoIndex((prev) => (prev + 1) % promoSlides.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [promoSlides.length]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("wishlist");
+    if (saved) {
+      try {
+        setWishlist(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  function toggleWishlist(productId) {
+    setWishlist((current) => {
+      const next = current.includes(productId)
+        ? current.filter((id) => id !== productId)
+        : [...current, productId];
+      localStorage.setItem("wishlist", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  async function searchTrackedOrders() {
+    const clean = trackerPhone.trim();
+    if (!clean) {
+      setTrackerError("برجاء كتابة رقم الهاتف");
+      return;
+    }
+    setTrackerSearching(true);
+    setTrackerError("");
+    setTrackedOrders([]);
+    try {
+      const res = await fetch(`/api/orders?phone=${encodeURIComponent(clean)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setTrackerError(data.error || "خطأ أثناء البحث");
+      } else {
+        setTrackedOrders(data.orders || []);
+        if ((data.orders || []).length === 0) {
+          setTrackerError("لم يتم العثور على أي طلبات بهذا الرقم");
+        }
+      }
+    } catch (err) {
+      setTrackerError("فشل الاتصال بالخادم");
+    } finally {
+      setTrackerSearching(false);
+    }
+  }
+
+  function downloadReceiptAsImage(order) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 600;
+    canvas.height = 850;
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    grad.addColorStop(0, "#10b981");
+    grad.addColorStop(1, "#047857");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, 110);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 26px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("هايبر أسماء - إيصال حجز الكتروني", canvas.width / 2, 65);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "right";
+    ctx.font = "18px Arial, sans-serif";
+
+    let y = 180;
+    ctx.fillText(`رقم الحجز: HA-${order.id}`, 550, y); y += 40;
+    ctx.fillText(`اسم العميل: ${order.customerName}`, 550, y); y += 40;
+    ctx.fillText(`الهاتف: ${order.phone}`, 550, y); y += 40;
+    ctx.fillText(`موعد التوصيل المتوقع: ${order.deliveryDate}`, 550, y); y += 40;
+    ctx.fillText(`نوع التوصيل: ${order.deliveryOption === "today" ? "توصيل اليوم" : "حجز مسبق"}`, 550, y); y += 45;
+
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(50, y);
+    ctx.lineTo(550, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    y += 45;
+
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 19px Arial, sans-serif";
+    ctx.fillText("تفاصيل المنتجات المحجوزة:", 550, y); y += 35;
+
+    ctx.font = "16px Arial, sans-serif";
+    order.items.forEach((item) => {
+      ctx.textAlign = "right";
+      ctx.fillText(`• ${item.name} (عدد ${item.quantity})`, 550, y);
+      ctx.textAlign = "left";
+      ctx.fillText(`${money(item.price * item.quantity)}`, 50, y);
+      y += 35;
+    });
+
+    y += 15;
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(50, y);
+    ctx.lineTo(550, y);
+    ctx.stroke();
+    y += 45;
+
+    ctx.fillStyle = "#0f172a";
+    ctx.textAlign = "right";
+    ctx.font = "bold 18px Arial, sans-serif";
+    ctx.fillText("الإجمالي الفرعي:", 550, y);
+    ctx.textAlign = "left";
+    ctx.fillText(`${money(order.subtotal)}`, 50, y);
+    
+    y += 35;
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#047857";
+    ctx.fillText(`العربون المطلوب (الآن):`, 550, y);
+    ctx.textAlign = "left";
+    ctx.fillText(`${money(order.deposit)}`, 50, y);
+
+    y += 35;
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(`عمولة التحويل:`, 550, y);
+    ctx.textAlign = "left";
+    ctx.fillText(`${money(order.fee)}`, 50, y);
+
+    y += 45;
+    ctx.fillStyle = "#b91c1c";
+    ctx.font = "bold 20px Arial, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`الإجمالي المطلوب تحويله لتأكيد الحجز:`, 550, y);
+    ctx.textAlign = "left";
+    ctx.fillText(`${money(order.depositTotal)}`, 50, y);
+
+    y += 55;
+    ctx.fillStyle = "#000000";
+    ctx.textAlign = "center";
+    const barcodeStart = 160;
+    for (let i = 0; i < 35; i++) {
+      const w = (i % 4 === 0) ? 5 : (i % 2 === 0) ? 2 : 1;
+      ctx.fillRect(barcodeStart + i * 8, y, w, 50);
+    }
+    y += 75;
+    ctx.fillStyle = "#64748b";
+    ctx.font = "14px Arial, sans-serif";
+    ctx.fillText(`شكراً لثقتكم بنا - هايبر أسماء للحجز المسبق`, canvas.width / 2, y);
+
+    const link = document.createElement("a");
+    link.download = `HyperAsmaa-Voucher-${order.id}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }
+
   const [cartBump, setCartBump] = useState(false);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -352,11 +546,13 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       const matchesTab =
         activeTab === "offers"
           ? Boolean(product.offerActive) && Number(product.originalPrice) > Number(product.price)
-          : activeTab === "sweets"
-          ? true
-          : categories.includes(activeTab)
-            ? product.category === activeTab
-            : true;
+          : activeTab === "wishlist"
+            ? wishlist.includes(product.id)
+            : activeTab === "sweets"
+              ? true
+              : categories.includes(activeTab)
+                ? product.category === activeTab
+                : true;
       const matchesSearch = search ? product.name.includes(search) : true;
       return matchesTab && matchesSearch;
     });
@@ -556,8 +752,24 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       .filter(Boolean)
       .join("\n");
     window.open(`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_ORDER_NUMBER || "201550181908"}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
-    setMessage(`تم تسجيل الطلب رقم ${data.order.id}. الإدارة هتراجعه وتأكد الحجز.`);
+    setLastOrder({
+      id: data.order.id,
+      customerName: form.customerName,
+      phone: form.phone,
+      address: form.address,
+      deliveryOption: form.deliveryOption,
+      paymentLabel: payment.label,
+      paymentNumber: data.order.paymentNumber || payment.number,
+      deliveryDate: data.order.deliveryDate,
+      subtotal: data.order.subtotal,
+      deposit: data.order.deposit,
+      fee: data.order.fee,
+      depositTotal: data.order.depositTotal,
+      notes: form.notes,
+      items: [...cart]
+    });
     setCart([]);
+    setCartOpen(false);
     setForm({
       customerName: "",
       phone: "",
@@ -572,9 +784,14 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   return (
     <main className="shop-shell">
       <header className="topbar">
-        <a className="whatsapp-link" href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_CONTACT_NUMBER || "201031367037"}`} target="_blank" aria-label="واتساب">
-          <MessageCircle size={23} />
-        </a>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <a className="whatsapp-link" href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_CONTACT_NUMBER || "201031367037"}`} target="_blank" aria-label="واتساب">
+            <MessageCircle size={23} />
+          </a>
+          <button onClick={() => setTrackerOpen(true)} className="header-track-btn" aria-label="تتبع طلباتي">
+            <ClipboardList size={22} />
+          </button>
+        </div>
         <button className="brand-button" onClick={revealAdmin} aria-label="هايبر أسماء">
           <Logo />
         </button>
@@ -583,6 +800,31 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           <span>{cartCount}</span>
         </button>
       </header>
+
+      {/* Promo Banner Carousel */}
+      <div className="promo-carousel">
+        {promoSlides.map((slide, idx) => (
+          <div
+            key={idx}
+            className={`promo-slide ${promoIndex === idx ? "active" : ""}`}
+            style={{ background: slide.color }}
+          >
+            <div className="promo-slide-content">
+              <h3>{slide.title}</h3>
+              <p>{slide.desc}</p>
+            </div>
+            <div className="promo-indicator-dots">
+              {promoSlides.map((_, i) => (
+                <span
+                  key={i}
+                  className={`dot ${promoIndex === i ? "active" : ""}`}
+                  onClick={() => setPromoIndex(i)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <nav className="tabbar" aria-label="أقسام الموقع">
         {tabs.map((tab) => {
@@ -670,6 +912,16 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
             </div>
             <span className="story-label">الكل</span>
           </button>
+          {/* Wishlist story item */}
+          <button
+            className={`story-item ${activeTab === "wishlist" ? "active" : ""}`}
+            onClick={() => setActiveTab("wishlist")}
+          >
+            <div className="story-circle wishlist-circle">
+              <span className="story-emoji">❤️</span>
+            </div>
+            <span className="story-label">المفضلة</span>
+          </button>
           {categories.map((category) => (
             <button
               key={category}
@@ -688,6 +940,9 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         <div className="category-row">
           <button className={activeTab === "sweets" ? "active" : ""} onClick={() => setActiveTab("sweets")}>
             الكل
+          </button>
+          <button className={activeTab === "wishlist" ? "active" : ""} onClick={() => setActiveTab("wishlist")}>
+            المفضلة ❤️
           </button>
           {categories.map((category) => (
             <button
@@ -710,10 +965,24 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           Array.from({ length: 8 }).map((_, index) => <div className="product-skeleton" key={index} />)}
         {!productsLoading && productsError && <p className="empty catalog-empty">{productsError}</p>}
         {!productsLoading && !productsError && displayedProducts.map((product) => (
-          <ProductCard key={product.id} product={product} onAdd={addToCart} onUpdateQty={updateCartQty} cart={cart} />
+          <ProductCard
+            key={product.id}
+            product={product}
+            onAdd={addToCart}
+            onUpdateQty={updateCartQty}
+            cart={cart}
+            isLiked={wishlist.includes(product.id)}
+            onToggleWishlist={toggleWishlist}
+          />
         ))}
         {!productsLoading && !productsError && visibleProducts.length === 0 && (
-          <p className="empty catalog-empty">مفيش منتجات مطابقة للبحث.</p>
+          <div className="empty-catalog-fallback" style={{ width: "100%", gridColumn: "1/-1" }}>
+            {activeTab === "wishlist" ? (
+              <p className="empty catalog-empty">قائمة المفضلة بتاعتك فاضية دلوقتي. اضغط على رمز القلب ❤️ على المنتجات لإضافتها هنا.</p>
+            ) : (
+              <p className="empty catalog-empty">مفيش منتجات مطابقة للبحث.</p>
+            )}
+          </div>
         )}
       </section>
       {!productsLoading && !productsError && visibleLimit < visibleProducts.length && (
@@ -930,6 +1199,230 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         <aside className="admin-modal" aria-label="لوحة الإدارة">
           <AdminAccess embedded onClose={() => setAdminOpen(false)} />
         </aside>
+      )}
+
+      {/* Tracker Modal/Drawer */}
+      {trackerOpen && (
+        <aside className="cart-drawer tracker-drawer" aria-label="تتبع طلباتي">
+          <div className="drawer-panel">
+            <div className="drawer-head">
+              <h2>تتبع طلباتك السابقة 📋</h2>
+              <button onClick={() => setTrackerOpen(false)}>إغلاق</button>
+            </div>
+
+            <div className="tracker-search-box">
+              <p>ادخل رقم هاتفك المسجل لعرض حالة جميع طلباتك السابقة وتفاصيلها:</p>
+              <div className="tracker-input-group">
+                <input
+                  type="tel"
+                  placeholder="مثال: 01031367037"
+                  value={trackerPhone}
+                  onChange={(e) => setTrackerPhone(e.target.value)}
+                />
+                <button onClick={searchTrackedOrders} disabled={trackerSearching}>
+                  {trackerSearching ? "جاري البحث..." : "بحث 🔍"}
+                </button>
+              </div>
+              {trackerError && <p className="tracker-error-msg">{trackerError}</p>}
+            </div>
+
+            {trackedOrders.length > 0 && (
+              <div className="tracked-orders-list">
+                {trackedOrders.map((order) => {
+                  let activeStep = 1;
+                  if (["تم التأكيد", "قيد المراجعة"].includes(order.status)) activeStep = 2;
+                  else if (["جاري التحضير", "تم الشحن", "خرج للتوصيل"].includes(order.status)) activeStep = 3;
+                  else if (order.status === "مكتمل") activeStep = 4;
+
+                  let rawItems = [];
+                  try {
+                    rawItems = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+                  } catch (e) {}
+
+                  return (
+                    <div className="tracked-order-card" key={order.id}>
+                      <div className="order-card-header">
+                        <strong>رقم الحجز: HA-{order.id}</strong>
+                        <span className="order-card-date">{order.deliveryDate}</span>
+                      </div>
+                      
+                      {/* Timeline component */}
+                      <div className="status-timeline">
+                        <div className={`status-step ${activeStep >= 1 ? "completed" : ""}`}>
+                          <div className="step-bullet">1</div>
+                          <span className="step-label">تم الاستلام</span>
+                        </div>
+                        <div className={`status-line ${activeStep >= 2 ? "completed" : ""}`} />
+                        <div className={`status-step ${activeStep >= 2 ? "completed" : ""}`}>
+                          <div className="step-bullet">2</div>
+                          <span className="step-label">تأكيد الإيداع</span>
+                        </div>
+                        <div className={`status-line ${activeStep >= 3 ? "completed" : ""}`} />
+                        <div className={`status-step ${activeStep >= 3 ? "completed" : ""}`}>
+                          <div className="step-bullet">3</div>
+                          <span className="step-label">التحضير</span>
+                        </div>
+                        <div className={`status-line ${activeStep >= 4 ? "completed" : ""}`} />
+                        <div className={`status-step ${activeStep >= 4 ? "completed" : ""}`}>
+                          <div className="step-bullet">4</div>
+                          <span className="step-label">مكتمل</span>
+                        </div>
+                      </div>
+
+                      <div className="order-card-details">
+                        <div className="detail-row">
+                          <span>طريقة الدفع:</span>
+                          <strong>{order.paymentMethod === "vodafone" ? "فودافون كاش" : "انستاباي"}</strong>
+                        </div>
+                        <div className="detail-row">
+                          <span>المطلوب تحويله:</span>
+                          <strong>{money(Number(order.deposit) + Number(order.fee))}</strong>
+                        </div>
+                        <div className="detail-row text-danger">
+                          <span>حالة الحجز الحالية:</span>
+                          <strong>{order.status}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* Luxury Digital Receipt Ticket Modal */}
+      {lastOrder && (
+        <div className="receipt-modal-overlay">
+          <div className="receipt-modal-container">
+            <div className="receipt-ticket">
+              <div className="ticket-cutout-left" />
+              <div className="ticket-cutout-right" />
+              
+              <div className="ticket-header">
+                <div className="ticket-badge-ok">✓ تم تسجيل حجزك</div>
+                <h2>هايبر أسماء</h2>
+                <p>إيصال الحجز الإلكتروني</p>
+              </div>
+
+              <div className="ticket-body">
+                <div className="ticket-row-info">
+                  <span>رقم الحجز:</span>
+                  <strong>HA-{lastOrder.id}</strong>
+                </div>
+                <div className="ticket-row-info">
+                  <span>الاسم:</span>
+                  <strong>{lastOrder.customerName}</strong>
+                </div>
+                <div className="ticket-row-info">
+                  <span>التوصيل المتوقع:</span>
+                  <strong>{lastOrder.deliveryDate}</strong>
+                </div>
+                <div className="ticket-row-info">
+                  <span>نوع الطلب:</span>
+                  <strong>{lastOrder.deliveryOption === "today" ? "توصيل اليوم" : "حجز مسبق"}</strong>
+                </div>
+
+                <div className="ticket-divider-dash" />
+
+                <div className="ticket-items-title">المنتجات المحجوزة:</div>
+                <div className="ticket-items-list">
+                  {lastOrder.items.map((item, index) => (
+                    <div className="ticket-item-line" key={index}>
+                      <span>{item.name} × {item.quantity}</span>
+                      <strong>{money(item.price * item.quantity)}</strong>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="ticket-divider-dash" />
+
+                <div className="ticket-row-info total-row">
+                  <span>إجمالي المنتجات:</span>
+                  <strong>{money(lastOrder.subtotal)}</strong>
+                </div>
+                <div className="ticket-row-info deposit-row">
+                  <span>العربون المطلوب تحويله:</span>
+                  <strong className="text-success">{money(lastOrder.deposit)}</strong>
+                </div>
+                <div className="ticket-row-info fee-row">
+                  <span>عمولة التحويل:</span>
+                  <strong>{money(lastOrder.fee)}</strong>
+                </div>
+                <div className="ticket-row-info final-total-row">
+                  <span>المطلوب تحويله الآن:</span>
+                  <strong className="text-danger">{money(lastOrder.depositTotal)}</strong>
+                </div>
+
+                <div className="ticket-payment-card">
+                  <span>برجاء تحويل العربون على {lastOrder.paymentLabel}</span>
+                  <strong>{lastOrder.paymentNumber}</strong>
+                </div>
+
+                <div className="ticket-barcode-wrap">
+                  <div className="barcode-bars">
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="barcode-bar"
+                        style={{
+                          width: i % 4 === 0 ? "5px" : i % 2 === 0 ? "2px" : "1px",
+                          height: "40px",
+                          background: "#000",
+                          marginRight: "3px"
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span className="barcode-label">HA-{lastOrder.id}-{Math.floor(Math.random() * 9000 + 1000)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="receipt-actions">
+              <button onClick={() => downloadReceiptAsImage(lastOrder)} className="btn-download-receipt">
+                تنزيل الإيصال كصورة 📸
+              </button>
+              <button
+                onClick={() => {
+                  const orderItemsText = lastOrder.items
+                    .map((item) => `- ${item.name} × ${item.quantity} = ${money(item.price * item.quantity)}`)
+                    .join("\n");
+                  const whatsappMessage = [
+                    "طلب حجز جديد - هايبر أسماء",
+                    "-------------------------",
+                    `رقم الطلب: ${lastOrder.id}`,
+                    `الاسم: ${lastOrder.customerName}`,
+                    `الهاتف: ${lastOrder.phone}`,
+                    `العنوان: ${lastOrder.address}`,
+                    "",
+                    "المنتجات:",
+                    orderItemsText,
+                    "",
+                    `الإجمالي: ${money(lastOrder.subtotal)}`,
+                    `العربون: ${money(lastOrder.deposit)}`,
+                    `العمولة: ${money(lastOrder.fee)}`,
+                    `المطلوب تحويله الآن: ${money(lastOrder.depositTotal)}`,
+                    `نوع الطلب: ${lastOrder.deliveryOption === "today" ? "توصيل اليوم" : "حجز مسبق"}`,
+                    `رقم التحويل: ${lastOrder.paymentNumber}`,
+                    `التوصيل المتوقع: ${lastOrder.deliveryDate}`,
+                    lastOrder.notes ? `ملاحظات: ${lastOrder.notes}` : ""
+                  ]
+                    .filter(Boolean)
+                    .join("\n");
+                  window.open(`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_ORDER_NUMBER || "201550181908"}?text=${encodeURIComponent(whatsappMessage)}`, "_blank", "noopener,noreferrer");
+                }}
+                className="btn-whatsapp-receipt"
+              >
+                إرسال الحجز للواتساب 💬
+              </button>
+              <button onClick={() => setLastOrder(null)} className="btn-close-receipt">
+                إغلاق والعودة للمتجر
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
