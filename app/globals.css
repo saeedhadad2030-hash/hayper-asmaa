@@ -3779,13 +3779,16 @@ footer a {
   .market-card {
     padding: 8px 12px !important;
     border-radius: 12px !important;
-    gap: 8px !important;
+    gap: 10px !important;
     min-height: auto !important;
+    grid-template-columns: 32px 1fr !important;
+    align-items: center !important;
   }
 
   .market-card svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 32px !important;
+    height: 32px !important;
+    padding: 6px !important;
   }
 
   .market-card span {

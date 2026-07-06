@@ -790,6 +790,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           </a>
           <button onClick={() => setTrackerOpen(true)} className="header-track-btn" aria-label="تتبع طلباتي">
             <ClipboardList size={22} />
+            <span>طلباتي</span>
           </button>
         </div>
         <button className="brand-button" onClick={revealAdmin} aria-label="هايبر أسماء">
