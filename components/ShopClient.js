@@ -55,6 +55,17 @@ function mergeProductImages(previousProducts, nextProducts) {
   }));
 }
 
+const CATEGORY_ICONS = {
+  "حلويات شريف الزيني": "🍮",
+  "مخبوزات": "🥐",
+  "مشكل حلويات": "🍬",
+  "تورت": "🎂"
+};
+
+function getCategoryIcon(name) {
+  return CATEGORY_ICONS[name] || "✨";
+}
+
 function Logo() {
   return (
     <div className="brand-mark" aria-label="هايبر أسماء">
@@ -550,6 +561,32 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
             placeholder="دور على منتج"
           />
         </div>
+        {/* Instagram Stories Categories (Mobile Only) */}
+        <div className="stories-container">
+          <button
+            className={`story-item ${activeTab === "sweets" ? "active" : ""}`}
+            onClick={() => setActiveTab("sweets")}
+          >
+            <div className="story-circle">
+              <span className="story-emoji">🧁</span>
+            </div>
+            <span className="story-label">الكل</span>
+          </button>
+          {categories.map((category) => (
+            <button
+              key={category}
+              className={`story-item ${activeTab === category ? "active" : ""}`}
+              onClick={() => setActiveTab(category)}
+            >
+              <div className="story-circle">
+                <span className="story-emoji">{getCategoryIcon(category)}</span>
+              </div>
+              <span className="story-label">{category}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Text Categories (Desktop Only) */}
         <div className="category-row">
           <button className={activeTab === "sweets" ? "active" : ""} onClick={() => setActiveTab("sweets")}>
             الكل
@@ -612,6 +649,43 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         </a>
       </footer>
 
+      {/* Mobile Bottom Navigation Bar (Mobile Only) */}
+      <nav className="mobile-bottom-nav">
+        <button
+          className={activeTab === "sweets" ? "active" : ""}
+          onClick={() => jumpTo("sweets")}
+        >
+          <Sparkles size={20} />
+          <span>الكتالوج</span>
+        </button>
+        <button
+          className={activeTab === "offers" ? "active" : ""}
+          onClick={() => jumpTo("offers")}
+        >
+          <BadgePercent size={20} />
+          <span>العروض</span>
+        </button>
+        <button
+          className="nav-cart-btn"
+          onClick={() => setCartOpen(true)}
+        >
+          <div className="cart-badge-wrapper">
+            <ShoppingCart size={22} />
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+          </div>
+          <span>السلة</span>
+        </button>
+        <a
+          href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_CONTACT_NUMBER || "201031367037"}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nav-whatsapp-link"
+        >
+          <MessageCircle size={20} />
+          <span>تواصل</span>
+        </a>
+      </nav>
+
       <button className={`floating-cart ${cartBump ? "bump" : ""}`} onClick={() => setCartOpen(true)} aria-label="فتح السلة">
         <ShoppingCart />
         <span>{cartCount}</span>
@@ -620,7 +694,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       {toast && (
         <div className={`add-toast ${toast.isError ? "toast-error" : ""}`} role="status" aria-live="polite">
           <div className="toast-icon-wrap">
-            {toast.isError ? <Info size={22} /> : <Sparkles size={22} />}
+            {toast.isError ? <Info size={20} /> : <Sparkles size={20} />}
           </div>
           <div className="toast-content">
             <strong>{toast.isError ? "تنبيه" : "✓ تمت الإضافة للسلة"}</strong>
@@ -628,9 +702,10 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
           </div>
           {!toast.isError && (
             <button onClick={() => setCartOpen(true)} className="toast-action-btn">
-              إكمال الطلب 🛒
+              إكمال 🛒
             </button>
           )}
+          {!toast.isError && <div className="toast-progress-bar" />}
         </div>
       )}
 

@@ -2604,3 +2604,322 @@ footer a {
     min-height: 32px;
   }
 }
+
+/* Instagram Stories Category Carousel */
+.stories-container {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .stories-container {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 12px 6px 16px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+  }
+
+  .stories-container::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for Chrome/Safari */
+  }
+
+  .story-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    min-width: 72px;
+    cursor: pointer;
+    outline: none;
+    transition: transform 150ms ease;
+  }
+
+  .story-item:active {
+    transform: scale(0.92);
+  }
+
+  .story-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+    border: 2px solid #cbd5e1;
+    transition: all 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Glowing animated gradient border for active story */
+  .story-item.active .story-circle {
+    border-color: transparent;
+    background: padding-box linear-gradient(#fff, #fff), border-box linear-gradient(135deg, var(--gold), var(--green));
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    transform: scale(1.05);
+    animation: storyPulse 2.4s infinite ease-in-out;
+  }
+
+  .story-emoji {
+    font-size: 28px;
+    user-select: none;
+    transition: transform 200ms ease;
+  }
+
+  .story-item.active .story-emoji {
+    transform: scale(1.12) rotate(4deg);
+  }
+
+  .story-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--ink);
+    white-space: nowrap;
+    text-align: center;
+    max-width: 78px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 150ms ease;
+  }
+
+  .story-item.active .story-label {
+    color: var(--green-2);
+  }
+
+  /* Hide old text categories on mobile */
+  .category-row {
+    display: none !important;
+  }
+}
+
+@keyframes storyPulse {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.55);
+  }
+}
+
+/* Floating Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.02);
+    z-index: 45;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 8px;
+    direction: rtl;
+  }
+
+  .mobile-bottom-nav button,
+  .mobile-bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    font-weight: 800;
+    font-size: 10px;
+    padding: 6px 12px;
+    min-width: 60px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 180ms ease;
+  }
+
+  .mobile-bottom-nav button svg,
+  .mobile-bottom-nav a svg {
+    transition: transform 180ms ease;
+  }
+
+  .mobile-bottom-nav button.active,
+  .mobile-bottom-nav a.active {
+    color: var(--green-2);
+  }
+
+  .mobile-bottom-nav button.active svg {
+    transform: scale(1.15);
+    color: var(--green);
+  }
+
+  /* Raised middle Cart button */
+  .mobile-bottom-nav .nav-cart-btn {
+    position: relative;
+    top: -12px;
+    background: linear-gradient(135deg, var(--green), #14532d);
+    color: #fff !important;
+    width: 58px;
+    height: 58px;
+    min-width: 58px;
+    border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(20, 83, 45, 0.35), 0 0 20px rgba(16, 185, 129, 0.2);
+    padding: 0;
+    border: 3px solid #fff;
+    transform-origin: center;
+    animation: cartPulse 3.2s infinite ease-in-out;
+  }
+
+  .mobile-bottom-nav .nav-cart-btn:active {
+    transform: scale(0.9) translateY(4px);
+  }
+
+  .mobile-bottom-nav .nav-cart-btn svg {
+    color: #fff;
+    width: 22px;
+    height: 22px;
+  }
+
+  .mobile-bottom-nav .nav-cart-btn span {
+    font-size: 9px;
+    font-weight: 900;
+    color: #fff;
+    margin-top: 1px;
+  }
+
+  .cart-badge-wrapper {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .cart-badge {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    background: var(--gold);
+    color: #0f172a;
+    font-size: 10px;
+    font-weight: 900;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    padding: 0 4px;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Hide old float-cart */
+  .floating-cart {
+    display: none !important;
+  }
+}
+
+@keyframes cartPulse {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(20, 83, 45, 0.3), 0 0 10px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 12px 30px rgba(20, 83, 45, 0.5), 0 0 22px rgba(245, 158, 11, 0.4);
+  }
+}
+
+/* Dynamic Island Toast Notification Override for Mobile */
+@media (max-width: 760px) {
+  .add-toast {
+    position: fixed;
+    top: 16px;
+    bottom: auto !important; /* Move to top */
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: min(390px, calc(100% - 32px)) !important;
+    border-radius: 26px !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    padding: 10px 16px !important;
+    animation: dynamicIslandIn 450ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both !important;
+    overflow: hidden;
+  }
+
+  .add-toast.toast-error {
+    background: rgba(220, 38, 38, 0.95) !important;
+    border-color: rgba(254, 226, 226, 0.3) !important;
+  }
+
+  .add-toast .toast-icon-wrap {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .add-toast .toast-content strong {
+    font-size: 13px;
+    color: #fff;
+  }
+
+  .add-toast .toast-content span {
+    font-size: 12px;
+    color: #e2e8f0;
+    font-weight: 500;
+  }
+
+  .add-toast .toast-action-btn {
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 11px;
+    border-radius: 999px;
+  }
+
+  /* Progress Bar animation inside Dynamic Island */
+  .toast-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--green));
+    animation: shrinkProgress 2300ms linear forwards;
+  }
+}
+
+@keyframes dynamicIslandIn {
+  0% {
+    transform: translate(-50%, -60px) scale(0.8);
+    opacity: 0;
+  }
+  70% {
+    transform: translate(-50%, 4px) scale(1.02);
+  }
+  100% {
+    transform: translate(-50%, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shrinkProgress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
