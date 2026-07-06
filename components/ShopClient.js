@@ -342,8 +342,12 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   function jumpTo(tabId) {
+    if (tabId === "facebook") {
+      window.open("https://www.facebook.com/profile.php?id=100083242605659", "_blank", "noopener,noreferrer");
+      return;
+    }
     setActiveTab(tabId);
-    const targetId = tabId === "facebook" ? "social" : tabId;
+    const targetId = tabId === "offers" ? "sweets" : tabId;
     window.requestAnimationFrame(() => {
       document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
