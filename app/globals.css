@@ -2386,3 +2386,221 @@ footer a {
   color: var(--green-2);
   font-weight: 800;
 }
+
+/* Optimization for Mobile Admin Panel */
+@media (max-width: 760px) {
+  .admin-page-inner {
+    padding: 10px;
+  }
+
+  .admin-embedded {
+    padding: 12px;
+    min-height: 100vh;
+  }
+
+  .admin-header {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+  }
+
+  .admin-header h1 {
+    font-size: 18px;
+  }
+
+  .admin-header span {
+    font-size: 12px;
+  }
+
+  /* Stats grid 2 columns on all mobile screens */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .stat-card {
+    padding: 8px 10px;
+    gap: 4px;
+    border-radius: 8px;
+  }
+
+  .stat-card svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .stat-card span {
+    font-size: 11px;
+  }
+
+  .stat-card strong {
+    font-size: 16px;
+  }
+
+  /* Admin components container padding */
+  .product-editor,
+  .password-editor,
+  .category-manager,
+  .admin-products,
+  .orders-section,
+  .top-products {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .product-editor h2,
+  .password-editor h2,
+  .admin-products h2,
+  .orders-section h2,
+  .top-products h2,
+  .category-manager h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+
+  /* Form Labels & Inputs */
+  .checkout-form label,
+  .product-editor label,
+  .password-editor label,
+  .admin-login label {
+    font-size: 13px;
+    gap: 4px;
+  }
+
+  .checkout-form input,
+  .checkout-form textarea,
+  .product-editor input,
+  .password-editor input,
+  .admin-login input,
+  .order-controls input,
+  .order-controls select,
+  .category-add-form input {
+    padding: 8px 10px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  /* Buttons */
+  .form-actions button,
+  .product-editor button.primary-action,
+  .password-editor button.primary-action,
+  .category-add-form button.primary-action {
+    min-height: 36px;
+    font-size: 13px;
+    border-radius: 6px;
+  }
+
+  /* Category Manager and actions */
+  .category-manager {
+    gap: 10px;
+  }
+
+  .category-add-form {
+    gap: 6px;
+  }
+
+  .category-item {
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .category-actions button {
+    min-height: 28px !important;
+    height: 28px !important;
+    width: 28px !important;
+    padding: 0 !important;
+  }
+
+  /* Products list in admin panel */
+  .admin-products-head {
+    gap: 8px;
+    grid-template-columns: 1fr;
+  }
+
+  .admin-products-head input {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .admin-products-head button {
+    min-height: 34px;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  .admin-list article {
+    grid-template-columns: 42px 1fr 34px 34px;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 8px;
+  }
+
+  .admin-list img,
+  .tiny-placeholder {
+    width: 42px;
+    height: 42px;
+    border-radius: 6px;
+  }
+
+  .admin-list strong {
+    font-size: 13px;
+  }
+
+  .admin-list span {
+    font-size: 11px;
+  }
+
+  .admin-list button {
+    width: 32px;
+    min-height: 32px;
+    border-radius: 6px;
+  }
+
+  .admin-list button svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Orders grid and controls */
+  .orders-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .order-card {
+    padding: 10px;
+    gap: 6px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .order-head strong {
+    font-size: 14px;
+  }
+
+  .order-head span {
+    font-size: 11px;
+    padding: 3px 7px;
+  }
+
+  .order-money {
+    font-size: 12px;
+    gap: 2px;
+  }
+
+  .order-controls {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .order-controls select,
+  .order-controls input,
+  .order-controls button {
+    font-size: 12px;
+    padding: 6px;
+    min-height: 32px;
+  }
+}
