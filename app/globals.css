@@ -3019,28 +3019,31 @@ footer a {
 
 /* Header Track Button */
 .header-track-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--green);
-  border: 1px dashed var(--green);
-  border-radius: 12px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 800;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #c2881f);
+  color: #fff;
+  border: 0;
+  box-shadow: 0 4px 10px rgba(194, 136, 31, 0.25);
   cursor: pointer;
   transition: all 200ms ease;
+  padding: 0;
 }
 
 .header-track-btn:hover {
-  background: var(--green);
-  color: #fff;
-  border-style: solid;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 14px rgba(194, 136, 31, 0.4);
 }
 
 .header-track-btn:active {
   transform: scale(0.95);
+}
+
+.header-track-btn span {
+  display: none !important;
 }
 
 /* Wishlist Heart Button on Product Card */
@@ -3689,12 +3692,14 @@ footer a {
     margin: 10px 12px !important;
     gap: 8px !important;
     border-radius: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
   }
 
   .intro-band .hero-logo {
-    width: 80px !important;
-    height: 80px !important;
-    margin-bottom: 4px !important;
+    display: none !important;
   }
 
   .intro-band h1 {
