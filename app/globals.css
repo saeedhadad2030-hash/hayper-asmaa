@@ -2240,3 +2240,149 @@ footer a {
     transition-duration: 1ms !important;
   }
 }
+
+/* Product Actions Layout (Side-by-side buttons) */
+.product-actions {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.product-actions button {
+  width: 100% !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Order Now Button (Primary: Green/Gold Gradient) */
+.product-actions .btn-order-now {
+  background: linear-gradient(135deg, var(--gold), #d97706);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.22);
+}
+
+.product-actions .btn-order-now:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fbbf24, #b45309);
+  box-shadow: 0 10px 22px rgba(245, 158, 11, 0.35);
+}
+
+/* Order Now Pre-order Only variant */
+.product-actions .btn-order-now.preorder-only {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.22);
+}
+
+.product-actions .btn-order-now.preorder-only:hover:not(:disabled) {
+  background: linear-gradient(135deg, #60a5fa, #1e40af);
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
+}
+
+/* Add to Cart Button (Secondary: White background, green border) */
+.product-actions .btn-add-to-cart {
+  background: #fff;
+  color: var(--green-2);
+  border: 2px solid var(--green);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.06);
+}
+
+.product-actions .btn-add-to-cart:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: var(--green-2);
+  color: var(--green-2);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.15);
+}
+
+.product-actions .btn-add-to-cart:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Sold Out / Disabled overrides */
+.btn-sold-out {
+  width: 100% !important;
+  background: #cbd5e1 !important;
+  color: #64748b !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+/* Delivery Options styling in Checkout Drawer */
+.delivery-option-section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.delivery-option-section .section-label {
+  color: var(--green-2);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.delivery-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.delivery-switch button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--green-2);
+  font-weight: 900;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 200ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.delivery-switch button.active {
+  background: var(--green-2);
+  color: #fff;
+  border-color: var(--green-2);
+  box-shadow: 0 4px 12px rgba(4, 120, 135, 0.15);
+}
+
+.delivery-switch button:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  border-color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.delivery-warning {
+  margin: 0;
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.delivery-expected-date {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+
+.delivery-expected-date span {
+  color: var(--muted);
+}
+
+.delivery-expected-date strong {
+  color: var(--green-2);
+  font-weight: 800;
+}

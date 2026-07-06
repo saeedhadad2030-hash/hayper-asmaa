@@ -1,4 +1,4 @@
-import { createOrder, getProduct } from "@/lib/store";
+import { createOrder, getProduct, decrementStock } from "@/lib/store";
 import { calculateDeposit, getDeliveryDate, getPaymentMeta } from "@/lib/shop";
 
 export const runtime = "nodejs";
@@ -19,6 +19,9 @@ export async function POST(request) {
     return Response.json({ error: "السلة فارغة" }, { status: 400 });
   }
 
+  const deliveryOption = body.deliveryOption === "today" ? "today" : "tomorrow";
+  const offsetDays = deliveryOption === "today" ? 0 : null;
+
   const cleanItems = [];
   let subtotal = 0;
 
@@ -30,6 +33,17 @@ export async function POST(request) {
     }
 
     const quantity = Math.max(1, Number(item.quantity) || 1);
+
+    // Validate stock if ordering for today
+    if (deliveryOption === "today" && product.stock !== null && product.stock !== undefined) {
+      if (product.stock < quantity) {
+        return Response.json(
+          { error: `الكمية المطلوبة من "${product.name}" غير متوفرة للتوصيل اليوم. المتاح في المخزن: ${product.stock} قطعة.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const customPrice = Number(item.customPrice);
     const unitPrice = product.variablePrice && customPrice > 0 ? customPrice : product.price;
     const lineTotal = unitPrice * quantity;
@@ -49,7 +63,14 @@ export async function POST(request) {
   const deposit = calculateDeposit(subtotal, paymentMethod);
   const status = "في انتظار التحويل";
 
-  const deliveryDate = getDeliveryDate();
+  // Decrement stock if ordering for today
+  if (deliveryOption === "today") {
+    for (const item of cleanItems) {
+      await decrementStock(item.id, item.quantity);
+    }
+  }
+
+  const deliveryDate = getDeliveryDate(new Date(), offsetDays);
   const orderId = await createOrder({
     customerName: normalizeText(body.customerName),
     phone: normalizeText(body.phone),

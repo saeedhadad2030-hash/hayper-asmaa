@@ -16,7 +16,8 @@ import {
   ShieldCheck,
   ShoppingCart,
   Sparkles,
-  Trash2
+  Trash2,
+  Zap
 } from "lucide-react";
 import { calculateDeposit, getDeliveryDate, money, PAYMENT } from "@/lib/shop";
 import AdminAccess from "@/components/AdminAccess";
@@ -173,8 +174,32 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     phone: "",
     address: "",
     notes: "",
-    paymentMethod: "instapay"
+    paymentMethod: "instapay",
+    deliveryOption: "tomorrow"
   });
+
+  // Check if any product in the cart forces a pre-order (stock <= 0 or quantity > stock)
+  const cartForcesPreOrder = useMemo(() => {
+    return cart.some((item) => {
+      const product = products.find((p) => p.id === item.id);
+      if (product && product.stock !== null && product.stock !== undefined) {
+        return Number(product.stock) <= 0 || item.quantity > Number(product.stock);
+      }
+      return false;
+    });
+  }, [cart, products]);
+
+  // Automatically adjust delivery option if cart forces pre-order
+  useEffect(() => {
+    if (cartForcesPreOrder && form.deliveryOption === "today") {
+      setForm((current) => ({ ...current, deliveryOption: "tomorrow" }));
+    }
+  }, [cartForcesPreOrder, form.deliveryOption]);
+
+  const displayedDeliveryDate = useMemo(() => {
+    const offset = form.deliveryOption === "today" ? 0 : null;
+    return getDeliveryDate(new Date(), offset);
+  }, [form.deliveryOption]);
 
   useEffect(() => {
     let active = true;
@@ -243,7 +268,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     try {
       const saved = JSON.parse(localStorage.getItem("hyperCheckout") || "{}");
       if (Array.isArray(saved.cart)) setCart(saved.cart);
-      if (saved.form) setForm((current) => ({ ...current, ...saved.form }));
+      if (saved.form) setForm((current) => ({ ...current, ...saved.form, deliveryOption: saved.form.deliveryOption || "tomorrow" }));
     } catch {
       localStorage.removeItem("hyperCheckout");
     }
@@ -322,19 +347,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     }
   }
 
-  function addToCart(product, customPrice) {
-    // Check stock before adding
-    if (product.stock !== null && product.stock !== undefined) {
-      const currentInCart = cart
-        .filter((item) => item.id === product.id)
-        .reduce((sum, item) => sum + item.quantity, 0);
-      if (currentInCart >= Number(product.stock)) {
-        setToast({ id: Date.now(), productName: `${product.name} - الكمية المتاحة خلصت!`, isError: true });
-        window.setTimeout(() => setToast(null), 2300);
-        return;
-      }
-    }
-
+  function addToCart(product, customPrice, forceOpenCart = false, defaultDeliveryOption = null) {
     const price = Number(customPrice || product.price);
     setCart((current) => {
       const found = current.find((item) => item.id === product.id && item.price === price);
@@ -355,10 +368,19 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         }
       ];
     });
+
+    if (defaultDeliveryOption) {
+      setForm((current) => ({ ...current, deliveryOption: defaultDeliveryOption }));
+    }
+
     setToast({ id: Date.now(), productName: product.name });
     setCartBump(true);
     window.setTimeout(() => setCartBump(false), 520);
     window.setTimeout(() => setToast(null), 2300);
+
+    if (forceOpenCart) {
+      setCartOpen(true);
+    }
   }
 
   function updateQty(index, delta) {
@@ -416,6 +438,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       `العربون المطلوب: ${money(data.order.deposit)}`,
       `عمولة التحويل: ${money(data.order.fee)}`,
       `المطلوب تحويله الآن: ${money(data.order.depositTotal)}`,
+      `نوع الطلب: ${form.deliveryOption === "today" ? "توصيل فوري (اليوم)" : "حجز مسبق (لتاني يوم)"}`,
       `طريقة الدفع: ${payment.label}`,
       `رقم التحويل: ${data.order.paymentNumber}`,
       `التوصيل المتوقع: ${data.order.deliveryDate}`,
@@ -431,7 +454,8 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
       phone: "",
       address: "",
       notes: "",
-      paymentMethod: "instapay"
+      paymentMethod: "instapay",
+      deliveryOption: "tomorrow"
     });
     localStorage.removeItem("hyperCheckout");
   }
@@ -667,6 +691,38 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
                 <textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
               </label>
 
+              <div className="delivery-option-section">
+                <span className="section-label">موعد التوصيل</span>
+                <div className="delivery-switch">
+                  <button
+                    key="delivery-today"
+                    type="button"
+                    disabled={cartForcesPreOrder}
+                    className={form.deliveryOption === "today" ? "active" : ""}
+                    onClick={() => setForm({ ...form, deliveryOption: "today" })}
+                  >
+                    ⚡ توصيل فوري (اليوم)
+                  </button>
+                  <button
+                    key="delivery-tomorrow"
+                    type="button"
+                    className={form.deliveryOption === "tomorrow" ? "active" : ""}
+                    onClick={() => setForm({ ...form, deliveryOption: "tomorrow" })}
+                  >
+                    📅 حجز مسبق (لتاني يوم)
+                  </button>
+                </div>
+                {cartForcesPreOrder && (
+                  <p className="delivery-warning">
+                    ⚠️ السلة تحتوي على منتجات متاحة للحجز المسبق فقط (توصيل غداً).
+                  </p>
+                )}
+                <div className="delivery-expected-date">
+                  <span>التوصيل المتوقع:</span>
+                  <strong>{displayedDeliveryDate}</strong>
+                </div>
+              </div>
+
               <div className="payment-switch">
                 {Object.entries(PAYMENT).map(([key, option]) => (
                   <button
@@ -712,15 +768,11 @@ function ProductCard({ product, onAdd, cart }) {
   const soldOut = !product.available;
   const hasLimitedStock = product.stock !== null && product.stock !== undefined;
   const stockLeft = hasLimitedStock ? Number(product.stock) : null;
-  const cartQty = cart
-    .filter((item) => item.id === product.id)
-    .reduce((sum, item) => sum + item.quantity, 0);
-  const stockExhausted = hasLimitedStock && stockLeft <= 0;
-  const isDisabled = soldOut || stockExhausted;
+  const isOutOfStockToday = hasLimitedStock && stockLeft <= 0;
 
-  function handleAdd() {
-    if (isDisabled) return;
-    onAdd(product, customPrice);
+  function handleAdd(forceOpenCart = false, defaultDeliveryOption = null) {
+    if (soldOut) return;
+    onAdd(product, customPrice, forceOpenCart, defaultDeliveryOption);
     setAddedEffect(true);
     window.setTimeout(() => setAddedEffect(false), 900);
   }
@@ -733,8 +785,8 @@ function ProductCard({ product, onAdd, cart }) {
           <span className="offer-ribbon">عرض</span>
         )}
         {hasLimitedStock && !soldOut && (
-          <span className={`stock-badge ${stockLeft <= 3 ? "stock-low" : ""}`}>
-            {stockLeft <= 0 ? "نفذ" : `متبقي ${stockLeft}`}
+          <span className={`stock-badge ${stockLeft <= 0 ? "stock-low" : ""}`}>
+            {stockLeft <= 0 ? "حجز مسبق" : `متاح اليوم: ${stockLeft}`}
           </span>
         )}
         {soldOut && <div className="soldout">Sold<br />Out</div>}
@@ -758,21 +810,44 @@ function ProductCard({ product, onAdd, cart }) {
           />
         </label>
       )}
-      <button disabled={isDisabled} onClick={handleAdd} className={addedEffect ? "btn-success" : ""}>
-        {soldOut ? (
-          "Sold Out ×"
-        ) : stockExhausted ? (
-          "نفذ المخزون"
-        ) : addedEffect ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifySelf: "center" }}>
-            ✓ تمت الإضافة
-          </span>
-        ) : (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifySelf: "center" }}>
-            <Plus size={18} /> إضافة للسلة
-          </span>
-        )}
-      </button>
+
+      {soldOut ? (
+        <button disabled className="btn-sold-out">
+          غير متاح حالياً ×
+        </button>
+      ) : (
+        <div className="product-actions">
+          {isOutOfStockToday ? (
+            <button
+              onClick={() => handleAdd(true, "tomorrow")}
+              className="btn-order-now preorder-only"
+            >
+              <Clock3 size={16} /> حجز غداً
+            </button>
+          ) : (
+            <button
+              onClick={() => handleAdd(true, "today")}
+              className="btn-order-now"
+            >
+              <Zap size={16} /> طلب الآن
+            </button>
+          )}
+          <button
+            onClick={() => handleAdd(false, null)}
+            className={`btn-add-to-cart ${addedEffect ? "btn-success" : ""}`}
+          >
+            {addedEffect ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", justifyContent: "center" }}>
+                ✓ تمت
+              </span>
+            ) : (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", justifyContent: "center" }}>
+                <Plus size={15} /> السلة
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </article>
   );
 }
