@@ -3632,3 +3632,365 @@ footer a {
     opacity: 1;
   }
 }
+
+@media (max-width: 760px) {
+  /* 1. Global Reset & Typography scaling */
+  body {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+  
+  /* Hide the redundant top tabbar menu on mobile */
+  .tabbar {
+    display: none !important;
+  }
+
+  /* 2. Topbar Header styling (Make it compact) */
+  .topbar {
+    height: 52px !important;
+    padding: 0 12px !important;
+  }
+
+  .topbar .brand-button {
+    transform: scale(0.85) !important;
+  }
+
+  .topbar .whatsapp-link,
+  .topbar .header-track-btn,
+  .topbar .cart-mini {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  .topbar .whatsapp-link svg,
+  .topbar .header-track-btn svg,
+  .topbar .cart-mini svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .topbar .cart-mini span {
+    font-size: 9px !important;
+    padding: 1px 4px !important;
+    top: -4px !important;
+    right: -4px !important;
+  }
+
+  /* Adjust page padding-top for hidden tabbar and smaller topbar */
+  .shop-shell {
+    padding-top: 52px !important; /* matches topbar height */
+    padding-bottom: 90px !important; /* space for bottom nav */
+  }
+
+  /* 3. Intro Band (Hero section) - Shrink sizes and paddings */
+  .intro-band {
+    padding: 16px 12px !important;
+    margin: 10px 12px !important;
+    gap: 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .intro-band .hero-logo {
+    width: 80px !important;
+    height: 80px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .intro-band h1 {
+    font-size: 20px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .intro-band p {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    max-width: 95% !important;
+    margin: 0 auto !important;
+  }
+
+  .intro-band .eyebrow {
+    font-size: 10px !important;
+    padding: 2px 8px !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Expected delivery card inside Hero */
+  .intro-band .quick-info {
+    padding: 8px 12px !important;
+    margin-top: 8px !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+  }
+
+  .intro-band .quick-info span {
+    font-size: 10px !important;
+  }
+
+  .intro-band .quick-info strong {
+    font-size: 14px !important;
+    margin: 2px 0 !important;
+  }
+
+  .intro-band .quick-info small {
+    font-size: 9px !important;
+  }
+
+  /* 4. Market Info (Highlights cards) - Compress layout */
+  .market-info {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    padding: 0 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .market-card {
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+    gap: 8px !important;
+    min-height: auto !important;
+  }
+
+  .market-card svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .market-card span {
+    font-size: 10px !important;
+  }
+
+  .market-card strong {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* 5. Stories Category Carousel (Shrink circles) */
+  .stories-container {
+    padding: 8px 12px 10px !important;
+    gap: 10px !important;
+  }
+
+  .story-item {
+    min-width: 60px !important;
+    gap: 4px !important;
+  }
+
+  .story-circle {
+    width: 52px !important;
+    height: 52px !important;
+    border-width: 1.5px !important;
+  }
+
+  .story-emoji {
+    font-size: 22px !important;
+  }
+
+  .story-label {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  /* 6. Catalog Tools & Search */
+  .catalog-tools {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  .searchbox {
+    height: 38px !important;
+    border-radius: 10px !important;
+  }
+
+  .searchbox input {
+    font-size: 12px !important;
+  }
+
+  .catalog-meta {
+    font-size: 11px !important;
+    padding: 0 4px !important;
+  }
+
+  /* 7. Promotional Carousel (Shrink slightly) */
+  .promo-carousel {
+    margin: 8px 12px 0 12px !important;
+    height: 84px !important;
+    border-radius: 14px !important;
+  }
+
+  .promo-slide {
+    padding: 10px 14px !important;
+  }
+
+  .promo-slide-content h3 {
+    font-size: 14px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .promo-slide-content p {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* 8. Products Grid & Cards (Ensure tight 2 columns grid!) */
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding: 0 12px 20px !important;
+  }
+
+  .product-card {
+    padding: 8px !important;
+    border-radius: 12px !important;
+    gap: 4px !important;
+  }
+
+  .product-card h3 {
+    font-size: 12px !important;
+    margin-top: 4px !important;
+    font-weight: 800 !important;
+  }
+
+  .product-card p {
+    font-size: 9px !important;
+  }
+
+  .product-card .price-stack {
+    margin-top: 2px !important;
+  }
+
+  .product-card .old-price {
+    font-size: 9px !important;
+  }
+
+  .product-card .price {
+    font-size: 13px !important;
+  }
+
+  .product-card .savings-badge {
+    font-size: 9px !important;
+    padding: 2px 4px !important;
+    border-radius: 4px !important;
+  }
+
+  .product-card .image-wrap {
+    border-radius: 8px !important;
+  }
+
+  /* Action buttons inside product cards on mobile */
+  .product-card .product-actions {
+    margin-top: 6px !important;
+    gap: 4px !important;
+  }
+
+  .product-card .btn-order-now,
+  .product-card .btn-add-to-cart,
+  .product-card .btn-sold-out {
+    font-size: 10px !important;
+    padding: 6px 4px !important;
+    min-height: 30px !important;
+    border-radius: 8px !important;
+  }
+
+  .product-card .btn-order-now svg,
+  .product-card .btn-add-to-cart svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .product-card .product-stepper {
+    min-height: 32px !important;
+    border-radius: 8px !important;
+  }
+
+  .product-card .product-stepper .stepper-btn {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .product-card .product-stepper .stepper-btn svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .product-card .product-stepper .stepper-val {
+    font-size: 13px !important;
+    min-width: 16px !important;
+  }
+
+  /* Floating Bottom Navigation Bar (Make it slightly more compact) */
+  .mobile-bottom-nav {
+    bottom: 8px !important;
+    left: 8px !important;
+    right: 8px !important;
+    height: 52px !important;
+    border-radius: 14px !important;
+  }
+
+  .mobile-bottom-nav button,
+  .mobile-bottom-nav a {
+    gap: 2px !important;
+    font-size: 9px !important;
+    padding: 2px 8px !important;
+    min-width: auto !important;
+  }
+
+  .mobile-bottom-nav button svg,
+  .mobile-bottom-nav a svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .mobile-bottom-nav .nav-cart-btn {
+    top: -10px !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    border-width: 2px !important;
+  }
+
+  .mobile-bottom-nav .nav-cart-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .mobile-bottom-nav .nav-cart-btn span {
+    font-size: 8px !important;
+  }
+
+  .cart-badge {
+    top: -6px !important;
+    right: -8px !important;
+    font-size: 8px !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    border-width: 1px !important;
+  }
+
+  /* 9. About Market Section / Social Card */
+  .about-market {
+    padding: 16px 12px !important;
+    margin: 16px 12px !important;
+    border-radius: 16px !important;
+    gap: 12px !important;
+  }
+
+  .about-market h2 {
+    font-size: 16px !important;
+  }
+
+  .about-market p {
+    font-size: 11px !important;
+  }
+
+  .about-market a {
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .about-market a svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
