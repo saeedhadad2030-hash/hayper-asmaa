@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { calculateDeposit, getDeliveryDate, money, PAYMENT } from "@/lib/shop";
 import AdminAccess from "@/components/AdminAccess";
+import QRCode from "qrcode";
 
 const tabs = [
   { id: "about", label: "عن الماركت", icon: Info },
@@ -227,6 +228,7 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
   const [trackerError, setTrackerError] = useState("");
   const [lastOrder, setLastOrder] = useState(null);
   const [promoIndex, setPromoIndex] = useState(0);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   const promoSlides = [
     {
@@ -260,7 +262,49 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
         setWishlist(JSON.parse(saved));
       } catch (e) {}
     }
+
+    // Check for track parameter in URL (e.g. ?track=12 or ?track=HA-12)
+    const urlParams = new URLSearchParams(window.location.search);
+    const trackParam = urlParams.get("track") || urlParams.get("orderId");
+    if (trackParam) {
+      setTrackerOpen(true);
+      setTrackerSearching(true);
+      setTrackerError("");
+      setTrackedOrders([]);
+      
+      const cleanId = trackParam.replace(/[^0-9]/g, "");
+      fetch(`/api/orders?orderId=${cleanId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.order) {
+            setTrackedOrders([data.order]);
+            setTrackerPhone(data.order.phone);
+          } else {
+            setTrackerError(data.error || "الطلب غير موجود");
+          }
+        })
+        .catch(() => {
+          setTrackerError("فشل الاتصال بالخادم");
+        })
+        .finally(() => {
+          setTrackerSearching(false);
+        });
+    }
   }, []);
+
+  useEffect(() => {
+    if (lastOrder) {
+      const origin = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost") && !window.location.origin.startsWith("capacitor://")
+        ? window.location.origin
+        : "https://hayper-asmaa.netlify.app";
+      const trackingUrl = `${origin}/?track=${lastOrder.id}`;
+      QRCode.toDataURL(trackingUrl, { width: 180, margin: 1 }, (err, url) => {
+        if (!err) setQrCodeUrl(url);
+      });
+    } else {
+      setQrCodeUrl("");
+    }
+  }, [lastOrder]);
 
   function toggleWishlist(productId) {
     setWishlist((current) => {
@@ -299,10 +343,10 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     }
   }
 
-  function downloadReceiptAsImage(order) {
+  async function downloadReceiptAsImage(order) {
     const canvas = document.createElement("canvas");
     canvas.width = 600;
-    canvas.height = 850;
+    canvas.height = 920;
     const ctx = canvas.getContext("2d");
 
     ctx.fillStyle = "#ffffff";
@@ -391,15 +435,33 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
     ctx.textAlign = "left";
     ctx.fillText(`${money(order.depositTotal)}`, 50, y);
 
-    y += 55;
+    y += 45;
     ctx.fillStyle = "#000000";
     ctx.textAlign = "center";
-    const barcodeStart = 160;
-    for (let i = 0; i < 35; i++) {
-      const w = (i % 4 === 0) ? 5 : (i % 2 === 0) ? 2 : 1;
-      ctx.fillRect(barcodeStart + i * 8, y, w, 50);
+    
+    const origin = typeof window !== "undefined" && window.location.origin && !window.location.origin.includes("localhost") && !window.location.origin.startsWith("capacitor://")
+      ? window.location.origin
+      : "https://hayper-asmaa.netlify.app";
+    const trackingUrl = `${origin}/?track=${order.id}`;
+    
+    const qrDataUrl = await new Promise((resolve) => {
+      QRCode.toDataURL(trackingUrl, { width: 140, margin: 1 }, (err, url) => {
+        resolve(url || "");
+      });
+    });
+
+    if (qrDataUrl) {
+      const qrImg = new Image();
+      qrImg.src = qrDataUrl;
+      await new Promise((resolve) => {
+        qrImg.onload = resolve;
+      });
+      ctx.drawImage(qrImg, canvas.width / 2 - 70, y);
+      y += 155;
+    } else {
+      y += 50;
     }
-    y += 75;
+    
     ctx.fillStyle = "#64748b";
     ctx.font = "14px Arial, sans-serif";
     ctx.fillText(`شكراً لثقتكم بنا - هايبر أسماء للحجز المسبق`, canvas.width / 2, y);
@@ -1231,9 +1293,15 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
               <div className="tracked-orders-list">
                 {trackedOrders.map((order) => {
                   let activeStep = 1;
-                  if (["تم التأكيد", "قيد المراجعة"].includes(order.status)) activeStep = 2;
-                  else if (["جاري التحضير", "تم الشحن", "خرج للتوصيل"].includes(order.status)) activeStep = 3;
-                  else if (order.status === "مكتمل") activeStep = 4;
+                  if (["تم تاكيد التحويل", "مؤكد", "تم التأكيد", "قيد المراجعة"].includes(order.status)) {
+                    activeStep = 2;
+                  } else if (["يتم تسليم طلبك للدليفري", "جاري التحضير"].includes(order.status)) {
+                    activeStep = 3;
+                  } else if (["خرج للتوصيل", "تم الشحن"].includes(order.status)) {
+                    activeStep = 4;
+                  } else if (["تم التسليم", "مكتمل"].includes(order.status)) {
+                    activeStep = 5;
+                  }
 
                   let rawItems = [];
                   try {
@@ -1256,17 +1324,22 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
                         <div className={`status-line ${activeStep >= 2 ? "completed" : ""}`} />
                         <div className={`status-step ${activeStep >= 2 ? "completed" : ""}`}>
                           <div className="step-bullet">2</div>
-                          <span className="step-label">تأكيد الإيداع</span>
+                          <span className="step-label">تأكيد التحويل</span>
                         </div>
                         <div className={`status-line ${activeStep >= 3 ? "completed" : ""}`} />
                         <div className={`status-step ${activeStep >= 3 ? "completed" : ""}`}>
                           <div className="step-bullet">3</div>
-                          <span className="step-label">التحضير</span>
+                          <span className="step-label">تسليم الدليفري</span>
                         </div>
                         <div className={`status-line ${activeStep >= 4 ? "completed" : ""}`} />
                         <div className={`status-step ${activeStep >= 4 ? "completed" : ""}`}>
                           <div className="step-bullet">4</div>
-                          <span className="step-label">مكتمل</span>
+                          <span className="step-label">خرج للتوصيل</span>
+                        </div>
+                        <div className={`status-line ${activeStep >= 5 ? "completed" : ""}`} />
+                        <div className={`status-step ${activeStep >= 5 ? "completed" : ""}`}>
+                          <div className="step-bullet">5</div>
+                          <span className="step-label">تم التسليم</span>
                         </div>
                       </div>
 
@@ -1361,22 +1434,13 @@ export default function ShopClient({ initialProducts = EMPTY_PRODUCTS, initialPr
                   <strong>{lastOrder.paymentNumber}</strong>
                 </div>
 
-                <div className="ticket-barcode-wrap">
-                  <div className="barcode-bars">
-                    {Array.from({ length: 30 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="barcode-bar"
-                        style={{
-                          width: i % 4 === 0 ? "5px" : i % 2 === 0 ? "2px" : "1px",
-                          height: "40px",
-                          background: "#000",
-                          marginRight: "3px"
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <span className="barcode-label">HA-{lastOrder.id}-{Math.floor(Math.random() * 9000 + 1000)}</span>
+                <div className="ticket-qrcode-wrap" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "20px", marginBottom: "10px" }}>
+                  {qrCodeUrl ? (
+                    <img src={qrCodeUrl} alt="QR Code" style={{ width: "130px", height: "130px", border: "1px solid #eee", padding: "4px", borderRadius: "8px" }} />
+                  ) : (
+                    <div style={{ width: "130px", height: "130px", background: "#f8fafc", borderRadius: "8px" }} />
+                  )}
+                  <span className="barcode-label" style={{ fontSize: "12px", color: "#64748b", marginTop: "6px" }}>HA-{lastOrder.id}</span>
                 </div>
               </div>
             </div>

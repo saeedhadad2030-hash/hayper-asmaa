@@ -16,7 +16,7 @@ export async function GET() {
 export async function PATCH(request) {
   if (!(await isAdmin())) return unauthorized();
   const body = await request.json();
-  const status = ORDER_STATUSES.includes(body.status) ? body.status : "في انتظار التحويل";
+  const status = ORDER_STATUSES.includes(body.status) ? body.status : "تم استلام طلبك";
   const deliveryFee = body.deliveryFee === "" || body.deliveryFee == null ? null : Number(body.deliveryFee);
   await updateOrder(Number(body.id), { status, deliveryFee });
   return Response.json({ ok: true });

@@ -962,7 +962,7 @@ function AdminDashboard({ onLogout }) {
                   defaultValue={order.deliveryFee ?? ""}
                   onBlur={(event) => updateOrder(order, { deliveryFee: event.target.value })}
                 />
-                <button onClick={() => updateOrder(order, { status: "مؤكد" })}>تأكيد يدوي</button>
+                <button onClick={() => updateOrder(order, { status: "تم تاكيد التحويل" })}>تأكيد يدوي</button>
               </div>
             </article>
           ))}

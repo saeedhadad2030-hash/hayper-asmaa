@@ -1,4 +1,4 @@
-import { createOrder, getProduct, decrementStock, getOrdersByPhone } from "@/lib/store";
+import { createOrder, getProduct, decrementStock, getOrdersByPhone, getOrderById } from "@/lib/store";
 import { calculateDeposit, getDeliveryDate, getPaymentMeta } from "@/lib/shop";
 
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ export async function POST(request) {
   const paymentMethod = body.paymentMethod === "vodafone" ? "vodafone" : "instapay";
   const payment = getPaymentMeta(paymentMethod);
   const deposit = calculateDeposit(subtotal, paymentMethod);
-  const status = "في انتظار التحويل";
+  const status = "تم استلام طلبك";
 
   // Decrement stock if ordering for today
   if (deliveryOption === "today") {
@@ -104,10 +104,22 @@ export async function POST(request) {
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const phone = searchParams.get("phone");
-  if (!phone) {
-    return Response.json({ error: "برجاء كتابة رقم الهاتف" }, { status: 400 });
-  }
+  const orderId = searchParams.get("orderId");
+
   try {
+    if (orderId) {
+      const idNum = Number(orderId.replace(/[^0-9]/g, ""));
+      const order = await getOrderById(idNum);
+      if (!order) {
+        return Response.json({ error: "الطلب غير موجود" }, { status: 404 });
+      }
+      return Response.json({ order });
+    }
+
+    if (!phone) {
+      return Response.json({ error: "برجاء كتابة رقم الهاتف أو رقم الطلب" }, { status: 400 });
+    }
+
     const orders = await getOrdersByPhone(phone);
     return Response.json({ orders });
   } catch (err) {

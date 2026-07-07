@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET() {
   if (!(await isAdmin())) return unauthorized();
   const orders = await listOrders();
-  const confirmed = orders.filter((order) => ["مؤكد", "تم التسليم"].includes(order.status));
+  const confirmed = orders.filter((order) => ["تم تاكيد التحويل", "يتم تسليم طلبك للدليفري", "خرج للتوصيل", "تم التسليم"].includes(order.status));
   const summary = {
     totalOrders: orders.length,
     confirmedOrders: confirmed.length,
