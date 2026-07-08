@@ -1,12 +1,13 @@
 import { parseImageDataUrl } from "@/lib/product-images";
-import { getProduct, getSupabaseBaseUrl, hasSupabase } from "@/lib/store";
+import { getProduct, getSupabaseBaseUrl, hasSupabase, getEnv } from "@/lib/store";
 
 export const runtime = "nodejs";
 
 function storageHeaders(extra = {}) {
+  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
   return {
-    apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
     ...extra
   };
 }
