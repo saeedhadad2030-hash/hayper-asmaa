@@ -1,5 +1,6 @@
 import { createOrder, getProduct, decrementStock, getOrdersByPhone, getOrderById } from "@/lib/store";
 import { calculateDeposit, getDeliveryDate, getPaymentMeta } from "@/lib/shop";
+import { sendOrderEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -71,7 +72,7 @@ export async function POST(request) {
   }
 
   const deliveryDate = getDeliveryDate(new Date(), offsetDays);
-  const orderId = await createOrder({
+  const orderData = {
     customerName: normalizeText(body.customerName),
     phone: normalizeText(body.phone),
     address: normalizeText(body.address),
@@ -85,7 +86,19 @@ export async function POST(request) {
     receiptImage: null,
     status,
     deliveryDate
-  });
+  };
+
+  const orderId = await createOrder(orderData);
+
+  // Send Email Notification to admin
+  try {
+    await sendOrderEmail(orderId, {
+      ...orderData,
+      depositTotal: deposit.depositTotal
+    }, cleanItems);
+  } catch (err) {
+    console.error("Failed to send order email:", err);
+  }
 
   return Response.json({
     order: {
